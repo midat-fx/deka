@@ -1,0 +1,30 @@
+{
+  "name": "deka",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram-ассистент по Налоговому кодексу РК-2026 для ИП и самозанятых: подбор режима + ответы по первоисточникам с цитатами (RAG) + eval.",
+  "scripts": {
+    "dev": "tsx watch src/bot/index.ts",
+    "start": "tsx src/bot/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "stats": "tsx scripts/stats.ts",
+    "build:landing": "esbuild landing/src/main.ts --bundle --minify --outfile=landing/dist/app.js && cp landing/index.html landing/dist/index.html"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "grammy": "^1.44.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.110.0"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+dist/
+*.log
+.DS_Store
+.vscode/
+
+# телеметрия и сырые данные — не для git
+data/*.db
+data/*.db-journal
+data/raw/
+data/corpus/full.json

@@ -1,0 +1,8 @@
+{
+  // Конфиг Cloudflare Workers для Deka.
+  // Деплой: npx wrangler login → npx wrangler secret put BOT_TOKEN → npx wrangler deploy
+  "name": "deka-bot",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-07-01",
+  "workers_dev": true
+}
