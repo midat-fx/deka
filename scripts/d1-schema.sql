@@ -25,3 +25,9 @@ CREATE TABLE IF NOT EXISTS reminder_subs (
   user_id INTEGER PRIMARY KEY,
   subscribed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Языковая настройка пользователя (хэш id → ru/kk)
+CREATE TABLE IF NOT EXISTS user_prefs (
+  user_hash TEXT PRIMARY KEY,
+  lang TEXT NOT NULL
+);

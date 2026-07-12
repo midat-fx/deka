@@ -10,6 +10,7 @@ import { registerTurnover } from './turnover-flow';
 import { createSqliteTurnover } from '../store/turnover';
 import { registerDeadlines } from './deadlines-flow';
 import { createSqliteReminders } from '../store/reminders';
+import { createSqlitePrefs } from '../store/prefs';
 
 // Node ≥20.12 умеет читать .env сам. Если файла нет — не страшно,
 // переменные могут быть заданы в окружении (или в проде через секреты).
@@ -42,10 +43,11 @@ const retrieval =
   dbUrl && geminiKey ? { sql: neon(dbUrl) as unknown as SqlExecutor, apiKey: geminiKey } : undefined;
 console.log(retrieval ? '🔎 Гибридный поиск: BM25 + вектор (Neon)' : '🔎 Поиск: только BM25');
 
-registerWizard(bot, telemetry);
+const prefs = createSqlitePrefs();
+registerWizard(bot, telemetry, prefs);
 registerTurnover(bot, createSqliteTurnover(), telemetry);
 registerDeadlines(bot, createSqliteReminders(), telemetry);
-registerSearch(bot, searchIndex, telemetry, llm, retrieval); // после визарда: он ловит свободный текст
+registerSearch(bot, searchIndex, telemetry, llm, retrieval, prefs); // после визарда: он ловит свободный текст
 bot.catch((err) => console.error('Ошибка в боте:', err.error));
 
 console.log('🤖 Deka запускается…');
@@ -55,6 +57,7 @@ await bot.start({
       { command: 'start', description: 'Подобрать налоговый режим' },
       { command: 'oborot', description: 'Оборот и близость к лимитам' },
       { command: 'dedlayny', description: 'Налоговые дедлайны и напоминания' },
+      { command: 'til', description: 'Тіл / язык (қазақша · русский)' },
       { command: 'help', description: 'Что умеет бот' },
     ]);
     console.log(`✅ Запущен как @${me.username}. Открой бота в Telegram и напиши /start.`);

@@ -11,6 +11,8 @@ import { SearchIndex, type SearchHit } from '../rag/search';
 import { chunkUrl } from '../rag/chunks';
 import { generateAnswer, type AnswerOptions } from '../rag/answer';
 import { hybridSearch, type SqlExecutor } from '../rag/vector-search';
+import { detectLang, SEARCH_REFUSAL, type Lang } from '../i18n/i18n';
+import type { PrefsStore } from '../store/prefs';
 import type { EventTracker } from '../telemetry/types';
 
 /** Ниже этого балла считаем, что уверенного ответа в корпусе нет. */
@@ -42,12 +44,8 @@ export function renderSearchReply(hits: SearchHit[]): string {
   return lines.join('\n');
 }
 
-export function renderRefusal(): string {
-  return (
-    '🤷 В моих разделах кодекса (ИП, самозанятые, НДС, ИПН, соцналог) уверенного ответа не нашлось.\n\n' +
-    'Попробуй переформулировать — например: «лимит дохода самозанятого», «когда вставать на учёт по НДС».\n\n' +
-    'Или уточни в КГД: 1414 (бесплатно). Подбор налогового режима — /start.'
-  );
+export function renderRefusal(lang: Lang = 'ru'): string {
+  return SEARCH_REFUSAL[lang];
 }
 
 /** Уникальные статьи из ранжированного списка, максимум n (для показа источников). */
@@ -80,11 +78,16 @@ export function registerSearch(
   telemetry?: EventTracker,
   llm?: AnswerOptions,
   retrieval?: { sql: SqlExecutor; apiKey: string },
+  prefs?: PrefsStore,
 ): void {
   // Сам текст вопроса НЕ логируем (приватность) — только метрики качества.
   bot.on('message:text', async (ctx) => {
     if (ctx.message.text.startsWith('/')) return;
     const query = ctx.message.text;
+    const uid = ctx.from?.id;
+    // Язык: сохранённый выбор (/til) важнее, иначе — по буквам вопроса.
+    const lang: Lang =
+      (prefs && uid !== undefined ? await prefs.getLang(uid) : undefined) ?? detectLang(query);
     // 4 статьи-кандидата: LLM получает больше контекста (окно у моделей
     // огромное), а пользователю в источниках 4 ссылки ещё читабельны.
     const hits = index.search(query, 4);
@@ -99,7 +102,7 @@ export function registerSearch(
     );
 
     if (!confident) {
-      await ctx.reply(renderRefusal(), { link_preview_options: { is_disabled: true } });
+      await ctx.reply(renderRefusal(lang), { link_preview_options: { is_disabled: true } });
       return;
     }
 
@@ -123,7 +126,7 @@ export function registerSearch(
     let reply = renderSearchReply(sourceHits);
     if (llm) {
       await ctx.replyWithChatAction('typing');
-      const out = await generateAnswer(query, llmHits, llm);
+      const out = await generateAnswer(query, llmHits, { ...llm, lang });
       telemetry?.track(ctx.from?.id, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
       if (out.kind === 'answered') reply = renderAnswer(out.text, sourceHits);
     }

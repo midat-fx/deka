@@ -15,12 +15,15 @@
  * Модуль платформо-нейтрален (fetch есть и в Node, и в Workers).
  */
 import type { SearchHit } from './search';
+import { ANSWER_LANG_INSTRUCTION, type Lang } from '../i18n/i18n';
 
 export interface AnswerOptions {
   apiKey: string;
   /** По умолчанию стабильная gemini-2.5-flash; preview-модели — через env. */
   model?: string;
   timeoutMs?: number;
+  /** Язык ответа (казахский вопрос → казахский ответ). */
+  lang?: Lang;
 }
 
 export type AnswerOutcome =
@@ -31,7 +34,7 @@ export type AnswerOutcome =
 export const DEFAULT_MODEL = 'gemini-2.5-flash';
 const NO_ANSWER_SENTINEL = 'NO_ANSWER';
 
-export function buildPrompt(query: string, hits: SearchHit[]): string {
+export function buildPrompt(query: string, hits: SearchHit[], lang: Lang = 'ru'): string {
   const fragments = hits
     .map((h, i) => {
       const c = h.chunk;
@@ -48,7 +51,7 @@ export function buildPrompt(query: string, hits: SearchHit[]): string {
 1. Никаких сведений, которых нет во фрагментах. Числа, ставки, сроки, лимиты — только дословно из текста.
 2. В ответе обязательно указывай статьи-источники в виде (Ст. 718) — сразу после утверждения, которое на них опирается.
 3. Если во фрагментах НЕТ информации по теме вопроса — выведи ровно одно слово: ${NO_ANSWER_SENTINEL}. Но если информация есть, хоть и неполная, — ответь тем, что есть, и честно скажи, чего во фрагментах не хватает.
-4. Пиши просто и коротко (3–6 предложений), обращайся на «ты». Без markdown, без списков со звёздочками — обычный текст.
+4. ${ANSWER_LANG_INSTRUCTION[lang]} Пиши просто и коротко (3–6 предложений), на «ты». Без markdown, без списков со звёздочками — обычный текст.
 5. Суммы в МРП поясняй только если пересчёт есть в самих фрагментах — сам не пересчитывай.
 
 ФРАГМЕНТЫ КОДЕКСА:
@@ -91,7 +94,7 @@ export async function generateAnswer(
           'x-goog-api-key': opts.apiKey,
         },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: buildPrompt(query, hits) }] }],
+          contents: [{ role: 'user', parts: [{ text: buildPrompt(query, hits, opts.lang ?? 'ru') }] }],
           generationConfig: {
             temperature: 0.2,
             maxOutputTokens: 2048,

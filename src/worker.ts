@@ -22,6 +22,7 @@ import { registerTurnover } from './bot/turnover-flow';
 import { D1Turnover, type D1TurnoverDB } from './store/turnover';
 import { registerDeadlines } from './bot/deadlines-flow';
 import { D1Reminders, type D1RemindersDB } from './store/reminders';
+import { D1Prefs, type D1PrefsDB } from './store/prefs';
 import { dueReminders, renderReminder } from './domain/deadlines';
 import indexData from '../data/corpus/index.json';
 
@@ -59,10 +60,11 @@ export default {
         env.TELEMETRY_SALT ?? 'deka-mvp-salt',
       );
       const reminders = new D1Reminders(env.DB as unknown as D1RemindersDB);
-      registerWizard(bot, telemetry);
+      const prefs = new D1Prefs(env.DB as unknown as D1PrefsDB, env.TELEMETRY_SALT ?? 'deka-mvp-salt');
+      registerWizard(bot, telemetry, prefs);
       registerTurnover(bot, turnover, telemetry);
       registerDeadlines(bot, reminders, telemetry);
-      registerSearch(bot, index, telemetry, llm, retrieval); // после визарда: ловит свободный текст
+      registerSearch(bot, index, telemetry, llm, retrieval, prefs); // после визарда: ловит свободный текст
       bot.catch((err) => console.error('bot error:', err.error));
       handleUpdate = webhookCallback(bot, 'cloudflare-mod') as (
         req: Request,
