@@ -7,7 +7,7 @@ import {
 } from '../domain/wizard';
 import { REGIMES, SOURCES } from '../domain/regimes';
 import { nextStep, applyAnswer, type FlowStep } from '../domain/flow';
-import type { Telemetry } from '../telemetry/events';
+import type { EventTracker } from '../telemetry/types';
 
 /**
  * Состояние визарда в памяти процесса (ключ — id пользователя Telegram).
@@ -83,7 +83,7 @@ export function renderRecommendation(rec: Recommendation): string {
 
 const NO_PREVIEW = { link_preview_options: { is_disabled: true } } as const;
 
-export function registerWizard(bot: Bot, telemetry?: Telemetry): void {
+export function registerWizard(bot: Bot, telemetry?: EventTracker): void {
   bot.command('start', async (ctx) => {
     if (ctx.from) sessions.set(ctx.from.id, {});
     telemetry?.track(ctx.from?.id, 'start');

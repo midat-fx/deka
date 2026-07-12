@@ -91,35 +91,101 @@ export interface SearchHit {
 const K1 = 1.5;
 const B = 0.75;
 
+/**
+ * Сериализованный индекс: предвычисляется скриптом build-index и
+ * бандлится в Cloudflare Worker (там нет файловой системы, а CPU-время
+ * дорого — токенизировать 998 чанков на каждом старте нельзя).
+ * Постинги хранятся плоско: [doc, tf, doc, tf, …] — компактнее в JSON.
+ */
+export interface SerializedIndex {
+  v: 1;
+  chunks: Chunk[];
+  docLen: number[];
+  avgLen: number;
+  postings: Record<string, number[]>; // token → [docIdx, tf, docIdx, tf, …]
+  titles: Record<string, number[]>; // token → [docIdx, …]
+  contexts: Record<string, number[]>; // token → [docIdx, …]
+}
+
 export class SearchIndex {
   private chunks: Chunk[];
-  private docTokens: string[][];
-  private titleTokens: Set<string>[];
-  private contextTokens: Set<string>[];
   private docLen: number[];
   private avgLen: number;
-  private df = new Map<string, number>();
+  /** Инвертированный индекс: токен → список (документ, частота). */
+  private postings: Map<string, number[]>;
+  private titles: Map<string, Set<number>>;
+  private contexts: Map<string, Set<number>>;
 
   constructor(chunks: Chunk[]) {
     this.chunks = chunks;
+    this.postings = new Map();
+    this.titles = new Map();
+    this.contexts = new Map();
+
     // Название статьи добавляем в индексируемый текст: запрос «ставки ИПН»
     // должен находить статью «Ставки налога» даже без слова в теле.
-    this.docTokens = chunks.map((c) => tokenize(`${c.title}. ${c.text}`));
-    // Токены заголовка держим отдельно: совпадение с названием статьи —
-    // сильный сигнал («Ставки налога…» и есть ответ на «какая ставка»).
-    this.titleTokens = chunks.map((c) => new Set(tokenize(c.title)));
-    // Токены главы/раздела: запрос «…у самозанятого» должен подтягивать
-    // ВСЮ главу 77 «СНР для самозанятых» — так ориентируется юрист.
-    this.contextTokens = chunks.map((c) => new Set(tokenize(`${c.section} ${c.chapter}`)));
-    this.docLen = this.docTokens.map((t) => t.length);
+    const docTokens = chunks.map((c) => tokenize(`${c.title}. ${c.text}`));
+    this.docLen = docTokens.map((t) => t.length);
     this.avgLen = this.docLen.reduce((a, b) => a + b, 0) / Math.max(1, this.docLen.length);
-    for (const tokens of this.docTokens) {
-      for (const t of new Set(tokens)) this.df.set(t, (this.df.get(t) ?? 0) + 1);
-    }
+
+    docTokens.forEach((tokens, i) => {
+      const tf = new Map<string, number>();
+      for (const t of tokens) tf.set(t, (tf.get(t) ?? 0) + 1);
+      for (const [t, f] of tf) {
+        let list = this.postings.get(t);
+        if (!list) this.postings.set(t, (list = []));
+        list.push(i, f);
+      }
+    });
+
+    // Токены заголовка — отдельно: совпадение с названием статьи — сильный
+    // сигнал («Ставки налога…» и есть ответ на «какая ставка»).
+    chunks.forEach((c, i) => {
+      for (const t of new Set(tokenize(c.title))) {
+        let set = this.titles.get(t);
+        if (!set) this.titles.set(t, (set = new Set()));
+        set.add(i);
+      }
+      // Токены главы/раздела: «…у самозанятого» подтягивает всю главу 77 —
+      // так ориентируется юрист.
+      for (const t of new Set(tokenize(`${c.section} ${c.chapter}`))) {
+        let set = this.contexts.get(t);
+        if (!set) this.contexts.set(t, (set = new Set()));
+        set.add(i);
+      }
+    });
   }
 
   get size(): number {
     return this.chunks.length;
+  }
+
+  toJSON(): SerializedIndex {
+    const rec = <V>(m: Map<string, V>, f: (v: V) => number[]): Record<string, number[]> => {
+      const out: Record<string, number[]> = {};
+      for (const [k, v] of m) out[k] = f(v);
+      return out;
+    };
+    return {
+      v: 1,
+      chunks: this.chunks,
+      docLen: this.docLen,
+      avgLen: this.avgLen,
+      postings: rec(this.postings, (v) => v),
+      titles: rec(this.titles, (v) => [...v]),
+      contexts: rec(this.contexts, (v) => [...v]),
+    };
+  }
+
+  static fromSerialized(data: SerializedIndex): SearchIndex {
+    const idx = Object.create(SearchIndex.prototype) as SearchIndex;
+    idx.chunks = data.chunks;
+    idx.docLen = data.docLen;
+    idx.avgLen = data.avgLen;
+    idx.postings = new Map(Object.entries(data.postings));
+    idx.titles = new Map(Object.entries(data.titles).map(([k, v]) => [k, new Set(v)]));
+    idx.contexts = new Map(Object.entries(data.contexts).map(([k, v]) => [k, new Set(v)]));
+    return idx;
   }
 
   /**
@@ -131,32 +197,32 @@ export class SearchIndex {
     if (qTokens.length === 0) return [];
 
     const N = this.chunks.length;
-    const scores = new Array<number>(N).fill(0);
+    const scores = new Map<number, number>();
+    const add = (i: number, s: number) => scores.set(i, (scores.get(i) ?? 0) + s);
 
     for (const { token: q, weight } of qTokens) {
-      const df = this.df.get(q);
-      if (!df) continue;
+      const list = this.postings.get(q);
+      if (!list) continue; // токена нет в текстах — пропускаем целиком
+      const df = list.length / 2;
       const idf = Math.log(1 + (N - df + 0.5) / (df + 0.5));
-      for (let i = 0; i < N; i++) {
-        let tf = 0;
-        for (const t of this.docTokens[i]!) if (t === q) tf++;
-        const inContext = this.contextTokens[i]!.has(q);
-        if (tf === 0 && !inContext) continue;
-        let s = 0;
-        if (tf > 0) {
-          const denom = tf + K1 * (1 - B + (B * this.docLen[i]!) / this.avgLen);
-          s = idf * ((tf * (K1 + 1)) / denom);
-          // Буст за совпадение с названием статьи (см. конструктор).
-          if (this.titleTokens[i]!.has(q)) s += idf * 0.8;
-        }
-        // Буст за совпадение с названием главы/раздела.
-        if (inContext) s += idf * 0.5;
-        scores[i] = (scores[i] ?? 0) + s * weight;
+      const inTitle = this.titles.get(q);
+
+      for (let j = 0; j < list.length; j += 2) {
+        const i = list[j]!;
+        const tf = list[j + 1]!;
+        const denom = tf + K1 * (1 - B + (B * this.docLen[i]!) / this.avgLen);
+        let s = idf * ((tf * (K1 + 1)) / denom);
+        // Буст за совпадение с названием статьи.
+        if (inTitle?.has(i)) s += idf * 0.8;
+        add(i, s * weight);
       }
+      // Буст за совпадение с названием главы/раздела (даже если в тексте
+      // чанка слова нет).
+      for (const i of this.contexts.get(q) ?? []) add(i, idf * 0.5 * weight);
     }
 
-    const ranked = scores
-      .map((score, i) => ({ chunk: this.chunks[i]!, score }))
+    const ranked = [...scores.entries()]
+      .map(([i, score]) => ({ chunk: this.chunks[i]!, score }))
       .filter((h) => h.score > 0)
       .sort((a, b) => b.score - a.score);
 

@@ -1,8 +1,18 @@
 {
   // Конфиг Cloudflare Workers для Deka.
-  // Деплой: npx wrangler login → npx wrangler secret put BOT_TOKEN → npx wrangler deploy
+  // Деплой: npm run build:index → npx wrangler deploy (см. SETUP.md).
   "name": "deka-bot",
   "main": "src/worker.ts",
   "compatibility_date": "2026-07-01",
-  "workers_dev": true
+  // node:crypto для хэширования user_id в телеметрии (src/telemetry/d1.ts)
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "deka-telemetry",
+      "database_id": "91df4608-ac19-4733-ae01-19c4ba6591fc"
+    }
+  ]
 }

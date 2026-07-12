@@ -18,16 +18,11 @@ import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-export type EventName =
-  | 'start' // пользователь запустил /start
-  | 'help' // открыл /help
-  | 'wizard_answer' // ответил на вопрос визарда (detail: поле=значение)
-  | 'wizard_result' // дошёл до рекомендации (detail: какой режим)
-  | 'wizard_restart' // нажал «пройти заново»
-  | 'free_text' // (устар.) свободный текст до появления поиска
-  | 'search'; // поиск по кодексу (detail: hits/top/score либо refused; сам текст не храним)
+import type { EventName, EventTracker } from './types';
 
-export class Telemetry {
+export type { EventName, EventTracker } from './types';
+
+export class Telemetry implements EventTracker {
   private db: DatabaseSync;
   private insert: ReturnType<DatabaseSync['prepare']>;
   private salt: string;

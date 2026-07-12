@@ -1,39 +1,45 @@
 /**
  * Cloudflare Workers-версия Deka: Telegram шлёт апдейты на webhook,
- * Worker отвечает. Работает 24/7 без сервера, free tier 100k запросов/день.
+ * Worker отвечает. 24/7 без сервера, free tier 100k запросов/день.
  *
- * Локальная разработка остаётся на long-polling (src/bot/index.ts) —
- * там не нужен публичный URL. Один и тот же registerWizard в обоих режимах.
+ * Отличия от локального рантайма (src/bot/index.ts):
+ *  - индекс поиска НЕ строится, а загружается предвычисленным
+ *    (data/corpus/index.json, собирается `npm run build:index`) — на проде
+ *    нет файловой системы и лимит CPU не позволяет токенизировать корпус;
+ *  - телеметрия — в D1 (облачный SQLite), вставки уходят через waitUntil
+ *    после ответа пользователю (см. src/telemetry/d1.ts).
  *
- * TODO(D1): телеметрия на Workers поедет в Cloudflare D1 (тот же SQLite,
- * та же схема events) — подключим при деплое. Пока webhook-версия работает
- * без телеметрии, локальная — с ней.
- *
- * Деплой (после `npx wrangler login`):
- *   npx wrangler secret put BOT_TOKEN     # вставить токен
- *   npx wrangler deploy
- *   затем один раз назначить webhook:
- *   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<worker-url>/<секретный-путь>"
+ * Деплой: см. SETUP.md → «Прод на Cloudflare».
  */
 import { Bot, webhookCallback } from 'grammy';
 import { registerWizard } from './bot/wizard-flow';
+import { registerSearch } from './bot/search-flow';
+import { SearchIndex, type SerializedIndex } from './rag/search';
+import { D1Telemetry, type D1Like, type CtxLike } from './telemetry/d1';
+import indexData from '../data/corpus/index.json';
 
 export interface Env {
   BOT_TOKEN: string;
+  TELEMETRY_SALT?: string;
+  DB: D1Like;
 }
 
+// Кэш на тёплый isolate: бот и индекс создаются при первом запросе.
 let bot: Bot | null = null;
+let telemetry: D1Telemetry | null = null;
 let handleUpdate: ((req: Request) => Promise<Response>) | null = null;
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: CtxLike): Promise<Response> {
     if (!env.BOT_TOKEN) return new Response('BOT_TOKEN is not set', { status: 500 });
 
-    // Ленивая инициализация: бот создаётся при первом запросе и переживает
-    // тёплые вызовы Workers.
     if (!bot) {
+      const index = SearchIndex.fromSerialized(indexData as unknown as SerializedIndex);
+      telemetry = new D1Telemetry(env.DB, env.TELEMETRY_SALT ?? 'deka-mvp-salt');
       bot = new Bot(env.BOT_TOKEN);
-      registerWizard(bot);
+      registerWizard(bot, telemetry);
+      registerSearch(bot, index, telemetry); // после визарда: ловит свободный текст
+      bot.catch((err) => console.error('bot error:', err.error));
       handleUpdate = webhookCallback(bot, 'cloudflare-mod') as (
         req: Request,
       ) => Promise<Response>;
@@ -42,8 +48,12 @@ export default {
     const url = new URL(request.url);
     // Секретный путь = токен: Telegram знает его, посторонние — нет.
     if (request.method === 'POST' && url.pathname === `/${env.BOT_TOKEN}`) {
-      return handleUpdate!(request);
+      try {
+        return await handleUpdate!(request);
+      } finally {
+        telemetry!.flush(ctx);
+      }
     }
-    return new Response('Deka bot is running. Talk to me on Telegram: @deka_tax_bot');
+    return new Response('Deka is running. Talk to me on Telegram: https://t.me/deka_tax_bot');
   },
 };

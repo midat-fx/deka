@@ -9,7 +9,7 @@
 import type { Bot } from 'grammy';
 import { SearchIndex, type SearchHit } from '../rag/search';
 import { chunkUrl } from '../rag/chunks';
-import type { Telemetry } from '../telemetry/events';
+import type { EventTracker } from '../telemetry/types';
 
 /** Ниже этого балла считаем, что уверенного ответа в корпусе нет. */
 const MIN_TOP_SCORE = 7;
@@ -48,7 +48,7 @@ export function renderRefusal(): string {
   );
 }
 
-export function registerSearch(bot: Bot, index: SearchIndex, telemetry?: Telemetry): void {
+export function registerSearch(bot: Bot, index: SearchIndex, telemetry?: EventTracker): void {
   // Сам текст вопроса НЕ логируем (приватность) — только метрики качества.
   bot.on('message:text', async (ctx) => {
     if (ctx.message.text.startsWith('/')) return;
