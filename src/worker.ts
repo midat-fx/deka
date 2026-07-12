@@ -16,6 +16,8 @@ import { registerWizard } from './bot/wizard-flow';
 import { registerSearch } from './bot/search-flow';
 import { SearchIndex, type SerializedIndex } from './rag/search';
 import { D1Telemetry, type D1Like, type CtxLike } from './telemetry/d1';
+import { neon } from '@neondatabase/serverless';
+import type { SqlExecutor } from './rag/vector-search';
 import indexData from '../data/corpus/index.json';
 
 export interface Env {
@@ -23,6 +25,7 @@ export interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
   TELEMETRY_SALT?: string;
+  DATABASE_URL?: string;
   DB: D1Like;
 }
 
@@ -41,9 +44,13 @@ export default {
       const llm = env.GEMINI_API_KEY
         ? { apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL }
         : undefined;
+      const retrieval =
+        env.DATABASE_URL && env.GEMINI_API_KEY
+          ? { sql: neon(env.DATABASE_URL) as unknown as SqlExecutor, apiKey: env.GEMINI_API_KEY }
+          : undefined;
       bot = new Bot(env.BOT_TOKEN);
       registerWizard(bot, telemetry);
-      registerSearch(bot, index, telemetry, llm); // после визарда: ловит свободный текст
+      registerSearch(bot, index, telemetry, llm, retrieval); // после визарда: ловит свободный текст
       bot.catch((err) => console.error('bot error:', err.error));
       handleUpdate = webhookCallback(bot, 'cloudflare-mod') as (
         req: Request,

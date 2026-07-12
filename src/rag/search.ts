@@ -124,6 +124,7 @@ export class SearchIndex {
   private postings: Map<string, number[]>;
   private titles: Map<string, Set<number>>;
   private contexts: Map<string, Set<number>>;
+  private byId?: Map<string, Chunk>;
 
   constructor(chunks: Chunk[]) {
     this.chunks = chunks;
@@ -167,6 +168,12 @@ export class SearchIndex {
 
   get size(): number {
     return this.chunks.length;
+  }
+
+  /** Чанк по id — для сборки результатов векторного поиска (он отдаёт только id). */
+  chunkById(id: string): Chunk | undefined {
+    if (!this.byId) this.byId = new Map(this.chunks.map((c) => [c.id, c]));
+    return this.byId.get(id);
   }
 
   toJSON(): SerializedIndex {

@@ -10,6 +10,7 @@ import type { Bot } from 'grammy';
 import { SearchIndex, type SearchHit } from '../rag/search';
 import { chunkUrl } from '../rag/chunks';
 import { generateAnswer, type AnswerOptions } from '../rag/answer';
+import { hybridSearch, type SqlExecutor } from '../rag/vector-search';
 import type { EventTracker } from '../telemetry/types';
 
 /** Ниже этого балла считаем, что уверенного ответа в корпусе нет. */
@@ -49,6 +50,19 @@ export function renderRefusal(): string {
   );
 }
 
+/** Уникальные статьи из ранжированного списка, максимум n (для показа источников). */
+function topByArticle(hits: SearchHit[], n: number): SearchHit[] {
+  const seen = new Set<string>();
+  const out: SearchHit[] = [];
+  for (const h of hits) {
+    if (seen.has(h.chunk.article)) continue;
+    seen.add(h.chunk.article);
+    out.push(h);
+    if (out.length === n) break;
+  }
+  return out;
+}
+
 /** Человеческий ответ LLM + обязательные ссылки на статьи-источники. */
 export function renderAnswer(text: string, hits: SearchHit[]): string {
   const lines: string[] = [esc(text), '', '<b>Источники (проверь сам):</b>'];
@@ -65,6 +79,7 @@ export function registerSearch(
   index: SearchIndex,
   telemetry?: EventTracker,
   llm?: AnswerOptions,
+  retrieval?: { sql: SqlExecutor; apiKey: string },
 ): void {
   // Сам текст вопроса НЕ логируем (приватность) — только метрики качества.
   bot.on('message:text', async (ctx) => {
@@ -88,19 +103,29 @@ export function registerSearch(
       return;
     }
 
-    // Ретривал уверенный. С LLM — человеческий пересказ (grounded или откат
-    // к дословным фрагментам); без LLM — сразу фрагменты.
-    let reply = renderSearchReply(hits);
+    // Ретривал для ответа: гибрид BM25+вектор, если подключён Neon; иначе BM25.
+    // Топ-8 кусков без склейки по статьям (лимит и его последствия часто в
+    // соседних пунктах одной статьи).
+    let llmHits: SearchHit[];
+    if (retrieval) {
+      const fused = await hybridSearch(index, retrieval.sql, query, 8, {
+        apiKey: retrieval.apiKey,
+        pool: 12,
+      });
+      llmHits = fused.length > 0 ? fused : index.search(query, 8, { dedupeByArticle: false });
+    } else {
+      llmHits = index.search(query, 8, { dedupeByArticle: false });
+    }
+    const sourceHits = topByArticle(llmHits, 4);
+
+    // С LLM — человеческий пересказ (grounded или откат к дословным
+    // фрагментам); без LLM — сразу фрагменты.
+    let reply = renderSearchReply(sourceHits);
     if (llm) {
       await ctx.replyWithChatAction('typing');
-      // Модели — больше контекста: топ-8 кусков без склейки по статьям
-      // (лимит и его последствия часто в соседних пунктах одной статьи).
-      const llmHits = index.search(query, 8, { dedupeByArticle: false });
       const out = await generateAnswer(query, llmHits, llm);
       telemetry?.track(ctx.from?.id, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
-      if (out.kind === 'answered') reply = renderAnswer(out.text, hits);
-      // no_answer / error → остаёмся на дословных фрагментах: пользователь
-      // всё равно получает полезный grounded-ответ.
+      if (out.kind === 'answered') reply = renderAnswer(out.text, sourceHits);
     }
 
     await ctx.reply(reply, {

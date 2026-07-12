@@ -14,12 +14,15 @@
     "build:landing": "esbuild landing/src/main.ts --bundle --minify --outfile=landing/dist/app.js && cp landing/index.html landing/dist/index.html",
     "eval": "tsx scripts/eval-retrieval.ts",
     "build:index": "tsx scripts/build-index.ts",
-    "eval:answers": "tsx scripts/eval-answers.ts"
+    "eval:answers": "tsx scripts/eval-answers.ts",
+    "build:vectors": "tsx scripts/build-vectors.ts",
+    "eval:hybrid": "tsx scripts/eval-hybrid.ts"
   },
   "engines": {
     "node": ">=20.12"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "cheerio": "^1.2.0",
     "grammy": "^1.44.0"
   },
