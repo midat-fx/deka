@@ -13,7 +13,8 @@
     "stats": "tsx scripts/stats.ts",
     "build:landing": "esbuild landing/src/main.ts --bundle --minify --outfile=landing/dist/app.js && cp landing/index.html landing/dist/index.html",
     "eval": "tsx scripts/eval-retrieval.ts",
-    "build:index": "tsx scripts/build-index.ts"
+    "build:index": "tsx scripts/build-index.ts",
+    "eval:answers": "tsx scripts/eval-answers.ts"
   },
   "engines": {
     "node": ">=20.12"
