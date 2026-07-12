@@ -31,3 +31,16 @@ CREATE TABLE IF NOT EXISTS user_prefs (
   user_hash TEXT PRIMARY KEY,
   lang TEXT NOT NULL
 );
+
+-- Кэш LLM-ответов (ключ = стем-токены+язык) и дневной лимит вопросов
+CREATE TABLE IF NOT EXISTS answer_cache (
+  qkey TEXT PRIMARY KEY,
+  reply TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS llm_usage (
+  user_hash TEXT NOT NULL,
+  day TEXT NOT NULL,
+  n INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_hash, day)
+);

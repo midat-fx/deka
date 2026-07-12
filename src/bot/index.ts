@@ -12,6 +12,7 @@ import { registerDeadlines } from './deadlines-flow';
 import { registerTextRouter } from './text-router';
 import { createSqliteReminders } from '../store/reminders';
 import { createSqlitePrefs } from '../store/prefs';
+import { createSqliteAnswerCache } from '../store/answer-cache';
 
 // Node ≥20.12 умеет читать .env сам. Если файла нет — не страшно,
 // переменные могут быть заданы в окружении (или в проде через секреты).
@@ -52,7 +53,7 @@ registerTurnover(bot, turnoverStore, telemetry);
 registerDeadlines(bot, remindersStore, telemetry);
 // Роутер человеческих фраз и кнопок меню — ДО поиска.
 registerTextRouter(bot, { prefs, turnover: turnoverStore, reminders: remindersStore, telemetry });
-registerSearch(bot, searchIndex, telemetry, llm, retrieval, prefs); // последним: ловит свободный текст
+registerSearch(bot, searchIndex, telemetry, llm, retrieval, prefs, createSqliteAnswerCache()); // последним: ловит свободный текст
 bot.catch((err) => console.error('Ошибка в боте:', err.error));
 
 console.log('🤖 Deka запускается…');

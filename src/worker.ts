@@ -24,6 +24,7 @@ import { registerDeadlines } from './bot/deadlines-flow';
 import { registerTextRouter } from './bot/text-router';
 import { D1Reminders, type D1RemindersDB } from './store/reminders';
 import { D1Prefs, type D1PrefsDB } from './store/prefs';
+import { D1AnswerCache, type D1CacheDB } from './store/answer-cache';
 import { dueReminders, renderReminder } from './domain/deadlines';
 import indexData from '../data/corpus/index.json';
 
@@ -63,12 +64,13 @@ export default {
       );
       const reminders = new D1Reminders(env.DB as unknown as D1RemindersDB);
       const prefs = new D1Prefs(env.DB as unknown as D1PrefsDB, env.TELEMETRY_SALT ?? 'deka-mvp-salt');
+      const cache = new D1AnswerCache(env.DB as unknown as D1CacheDB, env.TELEMETRY_SALT ?? 'deka-mvp-salt');
       registerWizard(bot, telemetry, prefs);
       registerTurnover(bot, turnover, telemetry);
       registerDeadlines(bot, reminders, telemetry);
       // Роутер человеческих фраз и кнопок меню — ДО поиска.
       registerTextRouter(bot, { prefs, turnover, reminders, telemetry });
-      registerSearch(bot, index, telemetry, llm, retrieval, prefs); // последним: ловит свободный текст
+      registerSearch(bot, index, telemetry, llm, retrieval, prefs, cache); // последним: ловит свободный текст
       bot.catch((err) => console.error('bot error:', err.error));
       // Дефолт grammy — 10s и throw: Telegram получает 500 и ретраит апдейт,
       // сжигая квоту Gemini дважды. Даём запас (гибрид+LLM ≤ ~12s) и на

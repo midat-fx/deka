@@ -35,11 +35,12 @@ export const TURNOVER_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS turnover (
 );
 CREATE INDEX IF NOT EXISTS idx_turnover_user ON turnover(user_hash);`;
 
-// Периоды считаем в SQL от «сейчас»: текущий календарный месяц и год.
+// Периоды — по КАЛЕНДАРЮ АЛМАТЫ (UTC+5, без перехода на летнее время): и ts,
+// и «now» сдвигаем на +5 часов, иначе доход в 23:00 попал бы в чужой месяц.
 const MONTH_SQL =
-  "SELECT COALESCE(SUM(amount),0) AS s FROM turnover WHERE user_hash=? AND strftime('%Y-%m',ts)=strftime('%Y-%m','now')";
+  "SELECT COALESCE(SUM(amount),0) AS s FROM turnover WHERE user_hash=? AND strftime('%Y-%m',ts,'+5 hours')=strftime('%Y-%m','now','+5 hours')";
 const YEAR_SQL =
-  "SELECT COALESCE(SUM(amount),0) AS s FROM turnover WHERE user_hash=? AND strftime('%Y',ts)=strftime('%Y','now')";
+  "SELECT COALESCE(SUM(amount),0) AS s FROM turnover WHERE user_hash=? AND strftime('%Y',ts,'+5 hours')=strftime('%Y','now','+5 hours')";
 const INSERT_SQL = 'INSERT INTO turnover (user_hash, amount) VALUES (?, ?)';
 const DELETE_SQL = 'DELETE FROM turnover WHERE user_hash=?';
 const UNDO_SQL =

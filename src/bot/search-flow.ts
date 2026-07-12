@@ -20,6 +20,7 @@ import {
   type Lang,
 } from '../i18n/i18n';
 import type { PrefsStore } from '../store/prefs';
+import { cacheKey, type AnswerCache } from '../store/answer-cache';
 import type { EventTracker } from '../telemetry/types';
 
 /** Ниже этого BM25-балла лексический поиск не уверен. */
@@ -96,6 +97,11 @@ export function renderAnswer(text: string, hits: SearchHit[]): string {
   return lines.join('\n');
 }
 
+/** Ответ свежий, если моложе 7 дней. */
+const CACHE_FRESH_MS = 7 * 24 * 3600 * 1000;
+/** Мягкий дневной лимит LLM-вопросов на пользователя. */
+const LLM_DAILY_LIMIT = 15;
+
 export function registerSearch(
   bot: Bot,
   index: SearchIndex,
@@ -103,6 +109,7 @@ export function registerSearch(
   llm?: AnswerOptions,
   retrieval?: { sql: SqlExecutor; apiKey: string },
   prefs?: PrefsStore,
+  cache?: AnswerCache,
 ): void {
   /** Общий путь ответа на вопрос — вызывается и текстом, и кнопкой-примером. */
   const answerQuestion = async (
@@ -113,6 +120,15 @@ export function registerSearch(
   ): Promise<void> => {
     // «Печатаю…» сразу: гибридный поиск + LLM занимают секунды.
     await ctx.replyWithChatAction('typing').catch(() => {});
+
+    // 0) Кэш ответа ДО поиска — экономит и поиск, и квоту LLM.
+    const qkey = cache && llm ? cacheKey(query, lang) : null;
+    const cached = qkey ? await cache!.get(qkey) : null;
+    if (cached && cached.ageMs < CACHE_FRESH_MS) {
+      telemetry?.track(uid, 'answer', 'cache_hit');
+      await ctx.reply(cached.reply, { parse_mode: 'HTML', link_preview_options: { is_disabled: true } });
+      return;
+    }
 
     // 1) Лексический кандидат.
     const bm25 = index.search(query, 4);
@@ -157,13 +173,27 @@ export function registerSearch(
     // фрагментам); без LLM — сразу фрагменты. Таймаут 8с: мы внутри вебхука.
     let reply = renderSearchReply(sourceHits);
     if (llm) {
-      const out = await generateAnswer(query, llmHits, {
-        ...llm,
-        lang,
-        timeoutMs: llm.timeoutMs ?? 8_000,
-      });
-      telemetry?.track(uid, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
-      if (out.kind === 'answered') reply = renderAnswer(out.text, sourceHits);
+      // Дневной лимит LLM на юзера: сверх — фрагменты (или протухший кэш).
+      const overLimit =
+        cache && uid !== undefined ? (await cache.hitsToday(uid)) >= LLM_DAILY_LIMIT : false;
+      if (overLimit) {
+        telemetry?.track(uid, 'answer', 'rate_limited');
+        if (cached) reply = cached.reply; // протухший кэш лучше сырых фрагментов
+      } else {
+        const out = await generateAnswer(query, llmHits, {
+          ...llm,
+          lang,
+          timeoutMs: llm.timeoutMs ?? 8_000,
+        });
+        telemetry?.track(uid, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
+        if (out.kind === 'answered') {
+          reply = renderAnswer(out.text, sourceHits);
+          if (qkey && cache) await cache.set(qkey, reply);
+          if (cache && uid !== undefined) await cache.bumpToday(uid);
+        } else if (cached && out.kind === 'error') {
+          reply = cached.reply; // при 429/сбое отдаём протухший кэш вместо фрагментов
+        }
+      }
     }
 
     await ctx.reply(reply, {
