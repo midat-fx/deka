@@ -1,0 +1,30 @@
+name: CI
+
+# Детерминированные проверки на каждый push и PR: типы, юнит-тесты,
+# сборка индекса (с самопроверкой) и eval-гейт поиска (hit@3 ≥ 75%).
+# Faithfulness-eval LLM-ответов сюда НЕ входит — он делает реальные вызовы
+# Gemini (нужен ключ, не детерминирован); запускается вручную.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24' # node:sqlite стабилен с Node 24 (телеметрия)
+          cache: npm
+      - run: npm ci
+      - name: Проверка типов
+        run: npm run typecheck
+      - name: Юнит-тесты
+        run: npm test
+      - name: Сборка индекса + самопроверка
+        run: npm run build:index
+      - name: Eval-гейт поиска (hit@3)
+        run: npm run eval
