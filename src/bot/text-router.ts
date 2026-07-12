@@ -6,12 +6,13 @@
  * дальше (next) — в поиск по кодексу. Запись дохода из фразы — только через
  * inline-подтверждение (защита от ложных срабатываний парсера).
  */
-import { InlineKeyboard, type Bot } from 'grammy';
+import { InlineKeyboard, type Bot, type Context } from 'grammy';
 import { routeIntent } from './router';
 import { mainKeyboard } from './keyboard';
 import { sendWizardStart, languageKeyboard } from './wizard-flow';
 import { sendTurnoverStatus, logIncome } from './turnover-flow';
 import { sendDeadlinesView } from './deadlines-flow';
+import { renderForm910 } from '../domain/form910';
 import { formatTenge } from '../domain/format';
 import {
   HELP,
@@ -31,6 +32,15 @@ import type { ReminderStore } from '../store/reminders';
 import type { EventTracker } from '../telemetry/types';
 
 const NO_PREVIEW = { link_preview_options: { is_disabled: true } } as const;
+
+/** Форма 910: чеклист + калькулятор с прикидкой из трекера. */
+export async function sendForm910(ctx: Context, turnover: TurnoverStore, uid: number): Promise<void> {
+  const totals = await turnover.totals(uid);
+  await ctx.reply(renderForm910(totals.yearTotal > 0 ? totals.yearTotal : null), {
+    parse_mode: 'HTML',
+    ...NO_PREVIEW,
+  });
+}
 
 export interface RouterDeps {
   prefs?: PrefsStore;
@@ -68,6 +78,8 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
             return;
           case 'deadlines':
             return sendDeadlinesView(ctx, reminders, uid);
+          case 'form910':
+            return sendForm910(ctx, turnover, uid);
           case 'language':
             await ctx.reply(TIL_PROMPT[lang], { reply_markup: languageKeyboard() });
             return;
@@ -107,9 +119,19 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
       case 'deadlines':
         return sendDeadlinesView(ctx, reminders, uid);
 
+      case 'form910':
+        return sendForm910(ctx, turnover, uid);
+
       case 'wizard':
         return sendWizardStart(ctx);
     }
+  });
+
+  bot.command('910', async (ctx) => {
+    const uid = ctx.from?.id;
+    if (uid === undefined) return;
+    telemetry?.track(uid, 'intent', 'form910');
+    await sendForm910(ctx, turnover, uid);
   });
 
   bot.callbackQuery(/^inc\|/, async (ctx) => {

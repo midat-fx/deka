@@ -137,6 +137,7 @@ export const ASK_AMOUNT: Record<Lang, string> = {
 /** Кнопки постоянного меню (reply keyboard). */
 export const MENU = {
   wizard: { ru: '🧮 Какой режим мне', kk: '🧮 Қай режим маған', en: '🧮 My tax regime' },
+  form910: { ru: '📋 Форма 910', kk: '📋 910-нысан', en: '📋 Form 910' },
   turnover: { ru: '📊 Мой оборот', kk: '📊 Менің айналымым', en: '📊 My turnover' },
   income: { ru: '➕ Записать доход', kk: '➕ Табыс жазу', en: '➕ Log income' },
   deadlines: { ru: '📅 Дедлайны', kk: '📅 Мерзімдер', en: '📅 Deadlines' },

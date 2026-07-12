@@ -60,6 +60,7 @@ await bot.start({
   onStart: async (me) => {
     await bot.api.setMyCommands([
       { command: 'start', description: 'Подобрать налоговый режим' },
+      { command: '910', description: 'Форма 910: сроки и расчёт налога' },
       { command: 'oborot', description: 'Оборот и близость к лимитам' },
       { command: 'dedlayny', description: 'Налоговые дедлайны и напоминания' },
       { command: 'til', description: 'Тіл / язык (қазақша · русский)' },

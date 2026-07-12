@@ -9,12 +9,14 @@ import { MENU, LANGS, type Lang } from '../i18n/i18n';
 export function mainKeyboard(lang: Lang): Keyboard {
   return new Keyboard()
     .text(MENU.wizard[lang])
+    .text(MENU.form910[lang]) // магнит августовской волны — наверх
+    .row()
     .text(MENU.turnover[lang])
-    .row()
     .text(MENU.income[lang])
-    .text(MENU.deadlines[lang])
     .row()
+    .text(MENU.deadlines[lang])
     .text(MENU.language[lang])
+    .row()
     .text(MENU.help[lang])
     .resized()
     .persistent();

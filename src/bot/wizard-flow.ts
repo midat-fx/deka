@@ -132,7 +132,9 @@ export function registerWizard(bot: Bot, telemetry?: EventTracker, prefs?: Prefs
     (prefs && uid !== undefined ? await prefs.getLang(uid) : undefined) ?? 'ru';
 
   bot.command('start', async (ctx) => {
-    telemetry?.track(ctx.from?.id, 'start');
+    // deep-link источник: t.me/deka_tax_bot?start=site910 → payload «site910».
+    const payload = (ctx.match ?? '').toString().trim().slice(0, 32);
+    telemetry?.track(ctx.from?.id, 'start', payload || undefined);
     const lang = await langOf(ctx.from?.id);
     // Постоянное меню внизу + приветствие. Кнопка визарда — inline.
     await ctx.reply(WELCOME[lang], {

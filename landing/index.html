@@ -3,8 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deka — налоги ИП и самозанятых в Казахстане по НК-2026</title>
-<meta name="description" content="Бесплатный калькулятор налогового режима по новому Налоговому кодексу РК-2026: самозанятый, упрощёнка или общий режим. Со ссылками на статьи кодекса. И Telegram-бот с напоминаниями.">
+<title>Deka — налоги ИП и самозанятых в Казахстане по НК-2026 · Форма 910</title>
+<meta name="description" content="Бесплатный помощник по Налоговому кодексу РК-2026 для ИП и самозанятых: подбор режима, форма 910 (сдать до 15 августа), калькулятор налога 4%, ответы по статьям кодекса и напоминания. Telegram-бот на русском и казахском.">
+<meta name="theme-color" content="#0b5560">
+<meta name="keywords" content="форма 910 2026, налоги ИП Казахстан 2026, самозанятый лимит, упрощёнка 4%, налоговый режим, НК РК 2026, e-Salyq">
+<link rel="canonical" href="https://deka-3st.pages.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Deka">
+<meta property="og:title" content="Deka — налоги ИП и самозанятых РК по кодексу 2026">
+<meta property="og:description" content="Подбор налогового режима, форма 910 до 15 августа, калькулятор налога, ответы по статьям кодекса. Бесплатно, на русском и казахском.">
+<meta property="og:url" content="https://deka-3st.pages.dev/">
+<meta property="og:image" content="https://deka-3st.pages.dev/og.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Deka — налоги ИП и самозанятых РК по кодексу 2026">
+<meta name="twitter:description" content="Форма 910 до 15 августа, подбор режима, калькулятор налога. Бесплатно.">
+<meta name="twitter:image" content="https://deka-3st.pages.dev/og.svg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b5560'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'%3ED%3C/text%3E%3C/svg%3E">
 <style>
   :root{
     --ink:#14212b; --muted:#5b6b78; --line:#dbe4ea; --bg:#f4f7f9; --card:#ffffff;
@@ -64,6 +78,20 @@
 
   footer{padding:30px 0 44px;color:var(--muted);font-size:13.5px}
   footer .wrap{border-top:1px solid var(--line);padding-top:22px}
+
+  .banner{background:#fff4e0;border-bottom:1px solid #f0d9a8}
+  .banner .wrap{padding:13px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .banner .cd{font-weight:800;font-size:15px;color:#9a6b0a;background:#fff;border:1px solid #f0d9a8;border-radius:8px;padding:4px 10px;white-space:nowrap}
+  .banner span.txt{font-size:14.5px}
+  .banner b{color:var(--ink)}
+  .s910{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:26px 0}
+  .s910 h2{margin-top:0}
+  .s910 table{width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:15px}
+  .s910 td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:top}
+  .s910 td:first-child{color:var(--muted);white-space:nowrap;width:36%}
+  .faq details{border-top:1px solid var(--line);padding:12px 0}
+  .faq summary{cursor:pointer;font-weight:600}
+  .faq p{margin:8px 0 0;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -80,11 +108,36 @@
   </div>
 </header>
 
+<section class="banner"><div class="wrap">
+  <span class="cd" id="cd910">Форма 910</span>
+  <span class="txt"><b>Форма 910</b> за 1-е полугодие — сдать до 15 августа, уплатить до 25 августа 2026. <a href="#f910">Что делать →</a></span>
+</div></section>
+
 <main>
   <div class="wrap">
     <h2 id="calculator">Какой налоговый режим мне подходит?</h2>
     <p class="h2sub">Тот же алгоритм, что в боте: детерминированная логика по лимитам из кодекса, никакого ИИ-гадания.</p>
     <div id="calc"><noscript>Для калькулятора нужен JavaScript — или просто открой бота: t.me/deka_tax_bot</noscript></div>
+
+    <section class="s910" id="f910">
+      <h2>Форма 910 за 1-е полугодие 2026 — что нужно знать</h2>
+      <table>
+        <tr><td>Кто сдаёт</td><td>ИП и ТОО на упрощёнке (СНР на основе упрощённой декларации).</td></tr>
+        <tr><td>Срок сдачи</td><td><b>до 15 августа 2026</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11967" target="_blank" rel="noopener">Ст. 727</a>).</td></tr>
+        <tr><td>Срок уплаты</td><td><b>до 25 августа 2026</b>.</td></tr>
+        <tr><td>Ставка</td><td>Упрощёнка — <b>4% от оборота</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11961" target="_blank" rel="noopener">Ст. 726</a>). Самозанятый — ИПН <b>0%</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11830" target="_blank" rel="noopener">Ст. 720</a>), только соцплатежи.</td></tr>
+        <tr><td>Где сдать</td><td>Приложение e-Salyq Business или кабинет налогоплательщика; оплата — Kaspi/банк.</td></tr>
+      </table>
+      <p>Deka посчитает твой налог: запиши доход в боте — покажет 4% и близость к лимитам. <a href="https://t.me/deka_tax_bot?start=site910" target="_blank" rel="noopener">Открыть в Telegram →</a></p>
+    </section>
+
+    <h2>Частые вопросы</h2>
+    <div class="faq">
+      <details><summary>Когда крайний срок формы 910 за 1-е полугодие 2026?</summary><p>Сдать декларацию — до 15 августа, уплатить налог — до 25 августа 2026 (Ст. 727 НК РК-2026). Если день выпадает на выходной, срок переносится на ближайший рабочий день.</p></details>
+      <details><summary>Какая ставка налога на упрощёнке в 2026 году?</summary><p>4% от оборота (Ст. 726 НК РК-2026). Местный акимат вправе изменить ставку в пределах ±50%.</p></details>
+      <details><summary>Сколько платит самозанятый?</summary><p>ИПН — 0% (Ст. 720). Платятся только социальные платежи, которые рассчитывает приложение e-Salyq.</p></details>
+      <details><summary>Какой лимит дохода у самозанятого?</summary><p>300 МРП в месяц — 1 297 500 ₸ в 2026 году. Выше лимита — упрощёнка или общий режим. Проверить свой случай можно калькулятором выше или в боте.</p></details>
+    </div>
 
     <h2>Почему Deka можно верить</h2>
     <div class="grid3">
@@ -102,6 +155,19 @@
   </div>
 </footer>
 
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Когда крайний срок формы 910 за 1-е полугодие 2026?","acceptedAnswer":{"@type":"Answer","text":"Сдать декларацию — до 15 августа, уплатить налог — до 25 августа 2026 года (Ст. 727 НК РК-2026)."}},
+{"@type":"Question","name":"Какая ставка налога на упрощёнке в 2026 году?","acceptedAnswer":{"@type":"Answer","text":"4% от оборота (Ст. 726 НК РК-2026). Местный акимат вправе изменить ставку в пределах ±50%."}},
+{"@type":"Question","name":"Сколько платит самозанятый в Казахстане?","acceptedAnswer":{"@type":"Answer","text":"ИПН — 0% (Ст. 720 НК РК-2026). Платятся только социальные платежи через приложение e-Salyq."}},
+{"@type":"Question","name":"Какой лимит дохода у самозанятого?","acceptedAnswer":{"@type":"Answer","text":"300 МРП в месяц — 1 297 500 тенге в 2026 году. Выше лимита — упрощёнка или общий режим."}}
+]}
+</script>
+<script>
+(function(){var el=document.getElementById('cd910');if(!el)return;
+var days=Math.ceil((Date.UTC(2026,7,15)-Date.now())/86400000);
+el.textContent=days>0?'⏳ '+days+' дн.':days===0?'сегодня!':'📋 Форма 910';})();
+</script>
 <script src="./app.js"></script>
 </body>
 </html>
