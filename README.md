@@ -2,6 +2,8 @@
 
 **Живой бот:** [@deka_tax_bot](https://t.me/deka_tax_bot) · **Сайт-калькулятор:** [deka-3st.pages.dev](https://deka-3st.pages.dev)
 
+> **In English (TL;DR):** Deka is a grounded Telegram assistant for Kazakhstan's new 2026 Tax Code. It pairs a deterministic tax-regime wizard (pure, unit-tested logic — no LLM in the legally-sensitive path) with citation-grounded Q&A: BM25 lexical search over the official code (custom Russian stemmer, query expansion, an eval gate at hit@3 = 94%) feeds a Gemini answer layer that must cite an article or is rejected — never a hallucinated tax figure. TypeScript end-to-end, deployed on Cloudflare Workers (webhook) + Pages, D1 telemetry, $0/mo infra. Engineering trade-offs are logged in [DECISIONS.md](DECISIONS.md).
+
 С 1 января 2026 в Казахстане действует новый Налоговый кодекс (№ 214-VIII). Изменилось всё: лимиты самозанятых, упрощёнки, порог НДС; первый полный отчётный цикл — **август 2026** (форма 910 до 15.08). В новых правилах путаются даже бухгалтеры, а официальный бот отвечает заготовками без ссылок на закон. Deka помогает ИП и самозанятым разобраться — и делает это **проверяемо честно**: каждый вывод подкреплён ссылкой на конкретную статью кодекса, а где данных не хватает, Deka говорит «нужно проверить», а не выдумывает.
 
 > ⚠️ Deka — неофициальный сервис, не связан с КГД. Это ориентир, а не налоговая консультация.
