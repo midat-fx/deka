@@ -9,6 +9,7 @@
 import type { Bot } from 'grammy';
 import { SearchIndex, type SearchHit } from '../rag/search';
 import { chunkUrl } from '../rag/chunks';
+import { generateAnswer, type AnswerOptions } from '../rag/answer';
 import type { EventTracker } from '../telemetry/types';
 
 /** Ниже этого балла считаем, что уверенного ответа в корпусе нет. */
@@ -48,12 +49,30 @@ export function renderRefusal(): string {
   );
 }
 
-export function registerSearch(bot: Bot, index: SearchIndex, telemetry?: EventTracker): void {
+/** Человеческий ответ LLM + обязательные ссылки на статьи-источники. */
+export function renderAnswer(text: string, hits: SearchHit[]): string {
+  const lines: string[] = [esc(text), '', '<b>Источники (проверь сам):</b>'];
+  for (const h of hits) {
+    lines.push(`• <a href="${chunkUrl(h.chunk)}">Ст. ${esc(h.chunk.article)}. ${esc(h.chunk.title)}</a>`);
+  }
+  lines.push('');
+  lines.push('<i>Ответ составлен по приведённым статьям НК РК-2026 и не является налоговой консультацией.</i>');
+  return lines.join('\n');
+}
+
+export function registerSearch(
+  bot: Bot,
+  index: SearchIndex,
+  telemetry?: EventTracker,
+  llm?: AnswerOptions,
+): void {
   // Сам текст вопроса НЕ логируем (приватность) — только метрики качества.
   bot.on('message:text', async (ctx) => {
     if (ctx.message.text.startsWith('/')) return;
     const query = ctx.message.text;
-    const hits = index.search(query, 3);
+    // 4 статьи-кандидата: LLM получает больше контекста (окно у моделей
+    // огромное), а пользователю в источниках 4 ссылки ещё читабельны.
+    const hits = index.search(query, 4);
     const confident = hits.length > 0 && hits[0]!.score >= MIN_TOP_SCORE;
 
     telemetry?.track(
@@ -64,7 +83,27 @@ export function registerSearch(bot: Bot, index: SearchIndex, telemetry?: EventTr
         : `refused;score=${hits[0]?.score.toFixed(1) ?? '0'}`,
     );
 
-    await ctx.reply(confident ? renderSearchReply(hits) : renderRefusal(), {
+    if (!confident) {
+      await ctx.reply(renderRefusal(), { link_preview_options: { is_disabled: true } });
+      return;
+    }
+
+    // Ретривал уверенный. С LLM — человеческий пересказ (grounded или откат
+    // к дословным фрагментам); без LLM — сразу фрагменты.
+    let reply = renderSearchReply(hits);
+    if (llm) {
+      await ctx.replyWithChatAction('typing');
+      // Модели — больше контекста: топ-8 кусков без склейки по статьям
+      // (лимит и его последствия часто в соседних пунктах одной статьи).
+      const llmHits = index.search(query, 8, { dedupeByArticle: false });
+      const out = await generateAnswer(query, llmHits, llm);
+      telemetry?.track(ctx.from?.id, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
+      if (out.kind === 'answered') reply = renderAnswer(out.text, hits);
+      // no_answer / error → остаёмся на дословных фрагментах: пользователь
+      // всё равно получает полезный grounded-ответ.
+    }
+
+    await ctx.reply(reply, {
       parse_mode: 'HTML',
       link_preview_options: { is_disabled: true },
     });

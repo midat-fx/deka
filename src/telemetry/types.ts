@@ -11,7 +11,8 @@ export type EventName =
   | 'wizard_result' // дошёл до рекомендации (detail: какой режим)
   | 'wizard_restart' // нажал «пройти заново»
   | 'free_text' // (устар.) свободный текст до появления поиска
-  | 'search'; // поиск по кодексу (detail: hits/top/score либо refused; сам текст не храним)
+  | 'search' // поиск по кодексу (detail: hits/top/score либо refused; сам текст не храним)
+  | 'answer'; // LLM-пересказ (detail: answered | no_answer | error:<причина>)
 
 export interface EventTracker {
   /** Записать событие. Никогда не бросает — телеметрия не роняет бота. */

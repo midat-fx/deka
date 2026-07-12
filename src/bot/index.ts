@@ -25,8 +25,14 @@ const telemetry = createTelemetry();
 const searchIndex = new SearchIndex(loadChunks());
 console.log(`📚 Индекс кодекса: ${searchIndex.size} чанков`);
 
+const geminiKey = process.env.GEMINI_API_KEY;
+const llm = geminiKey
+  ? { apiKey: geminiKey, model: process.env.GEMINI_MODEL }
+  : undefined;
+console.log(llm ? `🧠 LLM-ответы включены (${llm.model ?? 'gemini-2.5-flash'})` : '🧠 LLM выключен — режим дословных фрагментов');
+
 registerWizard(bot, telemetry);
-registerSearch(bot, searchIndex, telemetry); // после визарда: он ловит свободный текст
+registerSearch(bot, searchIndex, telemetry, llm); // после визарда: он ловит свободный текст
 bot.catch((err) => console.error('Ошибка в боте:', err.error));
 
 console.log('🤖 Deka запускается…');
