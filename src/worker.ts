@@ -20,6 +20,9 @@ import { neon } from '@neondatabase/serverless';
 import type { SqlExecutor } from './rag/vector-search';
 import { registerTurnover } from './bot/turnover-flow';
 import { D1Turnover, type D1TurnoverDB } from './store/turnover';
+import { registerDeadlines } from './bot/deadlines-flow';
+import { D1Reminders, type D1RemindersDB } from './store/reminders';
+import { dueReminders, renderReminder } from './domain/deadlines';
 import indexData from '../data/corpus/index.json';
 
 export interface Env {
@@ -55,8 +58,10 @@ export default {
         env.DB as unknown as D1TurnoverDB,
         env.TELEMETRY_SALT ?? 'deka-mvp-salt',
       );
+      const reminders = new D1Reminders(env.DB as unknown as D1RemindersDB);
       registerWizard(bot, telemetry);
       registerTurnover(bot, turnover, telemetry);
+      registerDeadlines(bot, reminders, telemetry);
       registerSearch(bot, index, telemetry, llm, retrieval); // после визарда: ловит свободный текст
       bot.catch((err) => console.error('bot error:', err.error));
       handleUpdate = webhookCallback(bot, 'cloudflare-mod') as (
@@ -75,4 +80,34 @@ export default {
     }
     return new Response('Deka is running. Talk to me on Telegram: https://t.me/deka_tax_bot');
   },
+
+  // Cron (см. wrangler.jsonc → triggers.crons): раз в сутки шлём напоминания
+  // подписчикам о дедлайнах, до сдачи которых 7 или 1 день.
+  async scheduled(_event: unknown, env: Env, _ctx: CtxLike): Promise<void> {
+    const today = new Date();
+    const due = dueReminders(today);
+    if (due.length === 0) return;
+    const reminders = new D1Reminders(env.DB as unknown as D1RemindersDB);
+    const subs = await reminders.listSubscribers();
+    if (subs.length === 0) return;
+    const sends: Promise<unknown>[] = [];
+    for (const d of due) {
+      const text = renderReminder(d, today);
+      for (const chatId of subs) sends.push(sendTelegram(env.BOT_TOKEN, chatId, text));
+    }
+    await Promise.allSettled(sends);
+  },
 };
+
+async function sendTelegram(token: string, chatId: number, text: string): Promise<void> {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      link_preview_options: { is_disabled: true },
+    }),
+  });
+}

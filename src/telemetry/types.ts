@@ -13,7 +13,8 @@ export type EventName =
   | 'free_text' // (устар.) свободный текст до появления поиска
   | 'search' // поиск по кодексу (detail: hits/top/score либо refused; сам текст не храним)
   | 'answer' // LLM-пересказ (detail: answered | no_answer | error:<причина>)
-  | 'turnover'; // трекер оборота (detail: add | show | reset)
+  | 'turnover' // трекер оборота (detail: add | show | reset)
+  | 'deadlines'; // дедлайны/напоминания (detail: show | sub | unsub)
 
 export interface EventTracker {
   /** Записать событие. Никогда не бросает — телеметрия не роняет бота. */

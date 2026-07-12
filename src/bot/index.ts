@@ -8,6 +8,8 @@ import { neon } from '@neondatabase/serverless';
 import type { SqlExecutor } from '../rag/vector-search';
 import { registerTurnover } from './turnover-flow';
 import { createSqliteTurnover } from '../store/turnover';
+import { registerDeadlines } from './deadlines-flow';
+import { createSqliteReminders } from '../store/reminders';
 
 // Node ≥20.12 умеет читать .env сам. Если файла нет — не страшно,
 // переменные могут быть заданы в окружении (или в проде через секреты).
@@ -42,6 +44,7 @@ console.log(retrieval ? '🔎 Гибридный поиск: BM25 + вектор
 
 registerWizard(bot, telemetry);
 registerTurnover(bot, createSqliteTurnover(), telemetry);
+registerDeadlines(bot, createSqliteReminders(), telemetry);
 registerSearch(bot, searchIndex, telemetry, llm, retrieval); // после визарда: он ловит свободный текст
 bot.catch((err) => console.error('Ошибка в боте:', err.error));
 
@@ -51,6 +54,7 @@ await bot.start({
     await bot.api.setMyCommands([
       { command: 'start', description: 'Подобрать налоговый режим' },
       { command: 'oborot', description: 'Оборот и близость к лимитам' },
+      { command: 'dedlayny', description: 'Налоговые дедлайны и напоминания' },
       { command: 'help', description: 'Что умеет бот' },
     ]);
     console.log(`✅ Запущен как @${me.username}. Открой бота в Telegram и напиши /start.`);

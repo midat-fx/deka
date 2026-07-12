@@ -19,3 +19,9 @@ CREATE TABLE IF NOT EXISTS turnover (
   ts TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_turnover_user ON turnover(user_hash);
+
+-- Подписчики на напоминания о дедлайнах (тут НАСТОЯЩИЙ telegram-id, не хэш — нужно писать человеку)
+CREATE TABLE IF NOT EXISTS reminder_subs (
+  user_id INTEGER PRIMARY KEY,
+  subscribed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
