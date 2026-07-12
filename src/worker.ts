@@ -18,6 +18,8 @@ import { SearchIndex, type SerializedIndex } from './rag/search';
 import { D1Telemetry, type D1Like, type CtxLike } from './telemetry/d1';
 import { neon } from '@neondatabase/serverless';
 import type { SqlExecutor } from './rag/vector-search';
+import { registerTurnover } from './bot/turnover-flow';
+import { D1Turnover, type D1TurnoverDB } from './store/turnover';
 import indexData from '../data/corpus/index.json';
 
 export interface Env {
@@ -49,7 +51,12 @@ export default {
           ? { sql: neon(env.DATABASE_URL) as unknown as SqlExecutor, apiKey: env.GEMINI_API_KEY }
           : undefined;
       bot = new Bot(env.BOT_TOKEN);
+      const turnover = new D1Turnover(
+        env.DB as unknown as D1TurnoverDB,
+        env.TELEMETRY_SALT ?? 'deka-mvp-salt',
+      );
       registerWizard(bot, telemetry);
+      registerTurnover(bot, turnover, telemetry);
       registerSearch(bot, index, telemetry, llm, retrieval); // после визарда: ловит свободный текст
       bot.catch((err) => console.error('bot error:', err.error));
       handleUpdate = webhookCallback(bot, 'cloudflare-mod') as (

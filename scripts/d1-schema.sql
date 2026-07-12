@@ -10,3 +10,12 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_hash);
 CREATE INDEX IF NOT EXISTS idx_events_event ON events(event);
+
+-- Трекер оборота (та же схема, что src/store/turnover.ts)
+CREATE TABLE IF NOT EXISTS turnover (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_hash TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  ts TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_turnover_user ON turnover(user_hash);

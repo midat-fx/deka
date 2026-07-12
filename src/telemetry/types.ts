@@ -12,7 +12,8 @@ export type EventName =
   | 'wizard_restart' // нажал «пройти заново»
   | 'free_text' // (устар.) свободный текст до появления поиска
   | 'search' // поиск по кодексу (detail: hits/top/score либо refused; сам текст не храним)
-  | 'answer'; // LLM-пересказ (detail: answered | no_answer | error:<причина>)
+  | 'answer' // LLM-пересказ (detail: answered | no_answer | error:<причина>)
+  | 'turnover'; // трекер оборота (detail: add | show | reset)
 
 export interface EventTracker {
   /** Записать событие. Никогда не бросает — телеметрия не роняет бота. */
