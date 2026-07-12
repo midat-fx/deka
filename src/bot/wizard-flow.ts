@@ -16,10 +16,14 @@ import type { EventTracker } from '../telemetry/types';
  */
 const sessions = new Map<number, Partial<WizardAnswers>>();
 
-const INTRO =
-  '👋 Я <b>Deka</b> — помогу разобраться с налогами для ИП и самозанятых по <b>Налоговому кодексу РК-2026</b>.\n\n' +
-  'Задам 3–4 вопроса и подскажу, какой режим тебе, скорее всего, подходит — со ссылками на источники и честными оговорками.\n\n' +
-  '<i>Это ориентир, а не налоговая консультация. Я неофициальный помощник, не связан с КГД.</i>';
+const WELCOME =
+  '👋 Привет! Я <b>Deka</b> — помогаю ИП и самозанятым Казахстана разобраться с налогами по <b>кодексу 2026</b>. Отвечаю по первоисточнику, со ссылками на статьи. Неофициальный помощник, не связан с КГД.\n\n' +
+  '<b>Что я умею:</b>\n' +
+  '🧮 Подобрать налоговый режим — кнопка ниже\n' +
+  '📊 Оборот и близость к лимитам — /oborot\n' +
+  '📅 Дедлайны и напоминания — /dedlayny\n' +
+  '💬 Ответить на вопрос по кодексу — просто напиши его\n\n' +
+  '<i>Это ориентир, а не налоговая консультация.</i>';
 
 const STATUS_ICON: Record<EligStatus, string> = {
   recommended: '✅',
@@ -87,14 +91,8 @@ export function registerWizard(bot: Bot, telemetry?: EventTracker): void {
   bot.command('start', async (ctx) => {
     if (ctx.from) sessions.set(ctx.from.id, {});
     telemetry?.track(ctx.from?.id, 'start');
-    const first = nextStep({});
-    if (!first) return;
-    const step = renderStep(first);
-    await ctx.reply(`${INTRO}\n\n${step.text}`, {
-      parse_mode: 'HTML',
-      reply_markup: step.kb,
-      ...NO_PREVIEW,
-    });
+    const kb = new InlineKeyboard().text('🧮 Подобрать налоговый режим', 'w|restart|go');
+    await ctx.reply(WELCOME, { parse_mode: 'HTML', reply_markup: kb, ...NO_PREVIEW });
   });
 
   bot.command('help', async (ctx) => {
