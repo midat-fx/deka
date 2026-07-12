@@ -78,13 +78,22 @@ describe('SqliteTurnover — учёт по пользователю', () => {
     expect((await s.totals(1)).yearTotal).toBe(0);
     expect((await s.totals(2)).yearTotal).toBe(700_000);
   });
+
+  it('undoLast снимает последнюю запись и возвращает её сумму', async () => {
+    const s = mk();
+    await s.add(1, 100_000);
+    await s.add(1, 250_000);
+    expect(await s.undoLast(1)).toBe(250_000);
+    expect((await s.totals(1)).yearTotal).toBe(100_000);
+    expect(await s.undoLast(2)).toBeNull(); // у другого юзера нечего отменять
+  });
 });
 
 describe('renderStatus', () => {
-  it('содержит суммы, лимиты и подсказку', () => {
+  it('содержит суммы, лимиты и человеческую подсказку (без слэшей)', () => {
     const html = renderStatus(assessTurnover(400_000, 400_000), 'июль', 2026);
     expect(html).toContain('Твой оборот');
-    expect(html).toContain('/oborot');
+    expect(html).toContain('просто напиши сумму'); // подсказка без /oborot
     expect(html).toContain('НДС');
   });
 });

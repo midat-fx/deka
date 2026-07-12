@@ -9,6 +9,7 @@ import type { SqlExecutor } from '../rag/vector-search';
 import { registerTurnover } from './turnover-flow';
 import { createSqliteTurnover } from '../store/turnover';
 import { registerDeadlines } from './deadlines-flow';
+import { registerTextRouter } from './text-router';
 import { createSqliteReminders } from '../store/reminders';
 import { createSqlitePrefs } from '../store/prefs';
 
@@ -44,10 +45,14 @@ const retrieval =
 console.log(retrieval ? '🔎 Гибридный поиск: BM25 + вектор (Neon)' : '🔎 Поиск: только BM25');
 
 const prefs = createSqlitePrefs();
+const turnoverStore = createSqliteTurnover();
+const remindersStore = createSqliteReminders();
 registerWizard(bot, telemetry, prefs);
-registerTurnover(bot, createSqliteTurnover(), telemetry);
-registerDeadlines(bot, createSqliteReminders(), telemetry);
-registerSearch(bot, searchIndex, telemetry, llm, retrieval, prefs); // после визарда: он ловит свободный текст
+registerTurnover(bot, turnoverStore, telemetry);
+registerDeadlines(bot, remindersStore, telemetry);
+// Роутер человеческих фраз и кнопок меню — ДО поиска.
+registerTextRouter(bot, { prefs, turnover: turnoverStore, reminders: remindersStore, telemetry });
+registerSearch(bot, searchIndex, telemetry, llm, retrieval, prefs); // последним: ловит свободный текст
 bot.catch((err) => console.error('Ошибка в боте:', err.error));
 
 console.log('🤖 Deka запускается…');

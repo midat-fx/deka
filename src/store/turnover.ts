@@ -23,6 +23,8 @@ export interface TurnoverStore {
   add(telegramId: number, amount: number): Promise<Totals>;
   totals(telegramId: number): Promise<Totals>;
   reset(telegramId: number): Promise<void>;
+  /** Удалить последнюю запись; вернуть её сумму (null — нечего отменять). */
+  undoLast(telegramId: number): Promise<number | null>;
 }
 
 export const TURNOVER_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS turnover (
@@ -40,6 +42,8 @@ const YEAR_SQL =
   "SELECT COALESCE(SUM(amount),0) AS s FROM turnover WHERE user_hash=? AND strftime('%Y',ts)=strftime('%Y','now')";
 const INSERT_SQL = 'INSERT INTO turnover (user_hash, amount) VALUES (?, ?)';
 const DELETE_SQL = 'DELETE FROM turnover WHERE user_hash=?';
+const UNDO_SQL =
+  'DELETE FROM turnover WHERE id = (SELECT id FROM turnover WHERE user_hash=? ORDER BY id DESC LIMIT 1) RETURNING amount';
 
 /** Локальное хранилище (dev): синхронный node:sqlite, обёрнутый в Promise. */
 export class SqliteTurnover implements TurnoverStore {
@@ -71,6 +75,13 @@ export class SqliteTurnover implements TurnoverStore {
 
   async reset(telegramId: number): Promise<void> {
     this.db.prepare(DELETE_SQL).run(hashUser(this.salt, telegramId));
+  }
+
+  async undoLast(telegramId: number): Promise<number | null> {
+    const row = this.db.prepare(UNDO_SQL).get(hashUser(this.salt, telegramId)) as
+      | { amount: number }
+      | undefined;
+    return row?.amount ?? null;
   }
 }
 
@@ -115,5 +126,13 @@ export class D1Turnover implements TurnoverStore {
 
   async reset(telegramId: number): Promise<void> {
     await this.db.prepare(DELETE_SQL).bind(hashUser(this.salt, telegramId)).run();
+  }
+
+  async undoLast(telegramId: number): Promise<number | null> {
+    const row = await this.db
+      .prepare(UNDO_SQL)
+      .bind(hashUser(this.salt, telegramId))
+      .first<{ amount: number }>();
+    return row?.amount ?? null;
   }
 }

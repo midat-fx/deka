@@ -1,4 +1,4 @@
-import { InlineKeyboard, type Bot } from 'grammy';
+import { InlineKeyboard, type Bot, type Context } from 'grammy';
 import {
   recommendRegime,
   type WizardAnswers,
@@ -7,16 +7,48 @@ import {
 } from '../domain/wizard';
 import { REGIMES, SOURCES } from '../domain/regimes';
 import { nextStep, applyAnswer, type FlowStep } from '../domain/flow';
-import { WELCOME, WIZARD_BUTTON, HELP, TIL_SET, TIL_ASK, type Lang } from '../i18n/i18n';
+import {
+  WELCOME,
+  WIZARD_BUTTON,
+  HELP,
+  TIL_SET,
+  TIL_PROMPT,
+  LANG_NAME,
+  LANGS,
+  type Lang,
+} from '../i18n/i18n';
+import { mainKeyboard } from './keyboard';
 import type { PrefsStore } from '../store/prefs';
 import type { EventTracker } from '../telemetry/types';
 
 /**
- * Состояние визарда в памяти процесса (ключ — id пользователя Telegram).
- * Для MVP этого хватает. TODO(этап БД): перенести в Postgres, чтобы ответы
- * переживали рестарт и работали при нескольких инстансах.
+ * Визард БЕЗ серверного состояния: накопленные ответы закодированы прямо в
+ * callback_data кнопок (формат «w|<state>|<field>|<value>», умещается в лимит
+ * 64 байта). Прод на Cloudflare перезапускает изоляты в любой момент — раньше
+ * это молча выбрасывало юзера на шаг 1; теперь прогресс живёт в самой кнопке
+ * и переживает любые рестарты и количество инстансов.
  */
-const sessions = new Map<number, Partial<WizardAnswers>>();
+
+/** Partial<WizardAnswers> → 3 символа: entity(i/l/-), emp(y/n/-), act(i/n/d/-). */
+export function encodeState(a: Partial<WizardAnswers>): string {
+  const e = a.entity === 'individual' ? 'i' : a.entity === 'legal' ? 'l' : '-';
+  const w = a.hasEmployees === true ? 'y' : a.hasEmployees === false ? 'n' : '-';
+  const act =
+    a.activity === 'in_list' ? 'i' : a.activity === 'not_in_list' ? 'n' : a.activity === 'unknown' ? 'd' : '-';
+  return `${e}${w}${act}`;
+}
+
+export function decodeState(s: string): Partial<WizardAnswers> {
+  const a: Partial<WizardAnswers> = {};
+  if (s[0] === 'i') a.entity = 'individual';
+  if (s[0] === 'l') a.entity = 'legal';
+  if (s[1] === 'y') a.hasEmployees = true;
+  if (s[1] === 'n') a.hasEmployees = false;
+  if (s[2] === 'i') a.activity = 'in_list';
+  if (s[2] === 'n') a.activity = 'not_in_list';
+  if (s[2] === 'd') a.activity = 'unknown';
+  return a;
+}
 
 const STATUS_ICON: Record<EligStatus, string> = {
   recommended: '✅',
@@ -25,12 +57,12 @@ const STATUS_ICON: Record<EligStatus, string> = {
   not_eligible: '✖️',
 };
 
-/** FlowStep (общее ядро) → текст сообщения и inline-клавиатура Telegram. */
-function renderStep(s: FlowStep): { text: string; kb: InlineKeyboard } {
+/** FlowStep + текущее состояние → сообщение и кнопки (состояние внутри callback). */
+function renderStep(s: FlowStep, state: string): { text: string; kb: InlineKeyboard } {
   const kb = new InlineKeyboard();
   const multiline = s.options.length > 2;
   for (const opt of s.options) {
-    kb.text(opt.label, `w|${s.field}|${opt.code}`);
+    kb.text(opt.label, `w|${state}|${s.field}|${opt.code}`);
     if (multiline) kb.row();
   }
   if (s.linkOut) kb.row().url(s.linkOut.label, s.linkOut.url);
@@ -40,7 +72,7 @@ function renderStep(s: FlowStep): { text: string; kb: InlineKeyboard } {
 
 function resultKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .text('🔄 Пройти заново', 'w|restart|go')
+    .text('🔄 Пройти заново', 'w|---|restart|go')
     .row()
     .url('📋 Список видов деятельности (самозанятые)', SOURCES.selfEmployedList.url);
 }
@@ -80,38 +112,61 @@ export function renderRecommendation(rec: Recommendation): string {
 
 const NO_PREVIEW = { link_preview_options: { is_disabled: true } } as const;
 
+/** Отправить первый шаг визарда новым сообщением (используется и роутером). */
+export async function sendWizardStart(ctx: Context): Promise<void> {
+  const first = nextStep({});
+  if (!first) return;
+  const step = renderStep(first, '---');
+  await ctx.reply(step.text, { parse_mode: 'HTML', reply_markup: step.kb, ...NO_PREVIEW });
+}
+
+/** Кнопки выбора языка (используется /til, меню и роутером). */
+export function languageKeyboard(): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  for (const l of LANGS) kb.text(LANG_NAME[l], `lang|${l}`);
+  return kb;
+}
+
 export function registerWizard(bot: Bot, telemetry?: EventTracker, prefs?: PrefsStore): void {
   const langOf = async (uid: number | undefined): Promise<Lang> =>
     (prefs && uid !== undefined ? await prefs.getLang(uid) : undefined) ?? 'ru';
 
   bot.command('start', async (ctx) => {
-    if (ctx.from) sessions.set(ctx.from.id, {});
     telemetry?.track(ctx.from?.id, 'start');
     const lang = await langOf(ctx.from?.id);
-    const kb = new InlineKeyboard().text(WIZARD_BUTTON[lang], 'w|restart|go');
-    await ctx.reply(WELCOME[lang], { parse_mode: 'HTML', reply_markup: kb, ...NO_PREVIEW });
+    // Постоянное меню внизу + приветствие. Кнопка визарда — inline.
+    await ctx.reply(WELCOME[lang], {
+      parse_mode: 'HTML',
+      reply_markup: mainKeyboard(lang),
+      ...NO_PREVIEW,
+    });
+    await ctx.reply(WIZARD_BUTTON[lang] + ' 👇', {
+      reply_markup: new InlineKeyboard().text(WIZARD_BUTTON[lang], 'w|---|restart|go'),
+    });
   });
 
   bot.command('help', async (ctx) => {
     telemetry?.track(ctx.from?.id, 'help');
-    await ctx.reply(HELP[await langOf(ctx.from?.id)], NO_PREVIEW);
+    const lang = await langOf(ctx.from?.id);
+    await ctx.reply(HELP[lang], { reply_markup: mainKeyboard(lang), ...NO_PREVIEW });
   });
 
-  // Переключение языка. /til qazaqsha → казахский, /til oryssha → русский.
+  // Смена языка: кнопки вместо «набери /til qazaqsha» (тот самый инцидент «да»).
   bot.command('til', async (ctx) => {
+    const lang = await langOf(ctx.from?.id);
+    await ctx.reply(TIL_PROMPT[lang], { reply_markup: languageKeyboard() });
+  });
+
+  bot.callbackQuery(/^lang\|/, async (ctx) => {
     const uid = ctx.from?.id;
     if (uid === undefined) return;
-    const arg = (ctx.match ?? '').toString().trim().toLowerCase();
-    let next: Lang | undefined;
-    if (/^(kk|қаз|каз|qaz|казах|қазақ)/.test(arg)) next = 'kk';
-    else if (/^(ru|рус|orys|русск|орыс)/.test(arg)) next = 'ru';
-    if (next) {
-      if (prefs) await prefs.setLang(uid, next);
-      telemetry?.track(uid, 'lang', next);
-      await ctx.reply(TIL_SET[next], NO_PREVIEW);
-    } else {
-      await ctx.reply(TIL_ASK[await langOf(uid)], NO_PREVIEW);
-    }
+    const next = (ctx.callbackQuery.data ?? '').split('|')[1] as Lang;
+    if (!LANGS.includes(next)) return;
+    if (prefs) await prefs.setLang(uid, next);
+    telemetry?.track(uid, 'lang', next);
+    await ctx.answerCallbackQuery(TIL_SET[next].replace(/✅ /, ''));
+    // Новое сообщение с меню на новом языке (reply-клавиатура сама не обновится).
+    await ctx.reply(TIL_SET[next], { reply_markup: mainKeyboard(next) });
   });
 
   bot.callbackQuery(/^w\|/, async (ctx) => {
@@ -119,18 +174,13 @@ export function registerWizard(bot: Bot, telemetry?: EventTracker, prefs?: Prefs
     if (userId === undefined) return;
 
     const parts = (ctx.callbackQuery.data ?? '').split('|');
-    const field = parts[1] ?? '';
-    const value = parts[2] ?? '';
+    const state = parts[1] ?? '---';
+    const field = parts[2] ?? '';
+    const value = parts[3] ?? '';
 
-    let answers = sessions.get(userId);
-    if (!answers) {
-      answers = {};
-      sessions.set(userId, answers);
-    }
+    const answers = decodeState(state);
 
     if (field === 'restart') {
-      answers = {};
-      sessions.set(userId, answers);
       telemetry?.track(userId, 'wizard_restart');
     } else {
       applyAnswer(answers, field, value);
@@ -139,9 +189,9 @@ export function registerWizard(bot: Bot, telemetry?: EventTracker, prefs?: Prefs
 
     await ctx.answerCallbackQuery();
 
-    const next = nextStep(answers);
+    const next = field === 'restart' ? nextStep({}) : nextStep(answers);
     if (next) {
-      const step = renderStep(next);
+      const step = renderStep(next, field === 'restart' ? '---' : encodeState(answers));
       await ctx.editMessageText(step.text, {
         parse_mode: 'HTML',
         reply_markup: step.kb,
@@ -158,6 +208,6 @@ export function registerWizard(bot: Bot, telemetry?: EventTracker, prefs?: Prefs
     }
   });
 
-  // Свободный текст обрабатывает registerSearch (src/bot/search-flow.ts) —
+  // Свободный текст обрабатывает registerSearch (там же роутер намерений) —
   // он должен быть зарегистрирован ПОСЛЕ визарда.
 }

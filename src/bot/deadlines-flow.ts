@@ -6,7 +6,7 @@
  * Сами напоминания шлёт cron в worker.ts (scheduled). Тут — только подписка
  * и показ. Логика дат — в src/domain/deadlines.ts (чистая, тестируемая).
  */
-import { InlineKeyboard, type Bot } from 'grammy';
+import { InlineKeyboard, type Bot, type Context } from 'grammy';
 import { renderUpcoming } from '../domain/deadlines';
 import type { ReminderStore } from '../store/reminders';
 import type { EventTracker } from '../telemetry/types';
@@ -19,6 +19,21 @@ function subKeyboard(subscribed: boolean): InlineKeyboard {
     : new InlineKeyboard().text('🔔 Напоминать о дедлайнах', 'rem|on');
 }
 
+/** Показать дедлайны с кнопкой подписки (зовёт и /dedlayny, и меню-роутер). */
+export async function sendDeadlinesView(
+  ctx: Context,
+  reminders: ReminderStore,
+  uid: number | undefined,
+  now: () => Date = () => new Date(),
+): Promise<void> {
+  const subbed = uid !== undefined ? await reminders.isSubscribed(uid) : false;
+  await ctx.reply(renderUpcoming(now()), {
+    parse_mode: 'HTML',
+    reply_markup: subKeyboard(subbed),
+    ...NO_PREVIEW,
+  });
+}
+
 export function registerDeadlines(
   bot: Bot,
   reminders: ReminderStore,
@@ -26,14 +41,8 @@ export function registerDeadlines(
   now: () => Date = () => new Date(),
 ): void {
   bot.command('dedlayny', async (ctx) => {
-    const uid = ctx.from?.id;
-    telemetry?.track(uid, 'deadlines', 'show');
-    const subbed = uid !== undefined ? await reminders.isSubscribed(uid) : false;
-    await ctx.reply(renderUpcoming(now()), {
-      parse_mode: 'HTML',
-      reply_markup: subKeyboard(subbed),
-      ...NO_PREVIEW,
-    });
+    telemetry?.track(ctx.from?.id, 'deadlines', 'show');
+    await sendDeadlinesView(ctx, reminders, ctx.from?.id, now);
   });
 
   bot.command('napomni', async (ctx) => {

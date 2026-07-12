@@ -64,13 +64,22 @@ ${fragments}
 
 /**
  * Ответ обязан ссылаться хотя бы на одну статью из переданных фрагментов.
- * Принимаем обе формы: «Ст. 99» и «статье 99» (модель пишет по-разному).
+ * Формы цитат по языкам: «Ст. 99 / статье 99» (ru), «99-бап» (kk),
+ * «Art. 99 / Article 99» (en) — иначе казахские/английские ответы браковались
+ * бы валидатором и юзер получал сырые фрагменты.
  */
+const CITE_PATTERNS = [
+  /(?:ст\.?|стать[а-яё]+)\s*(\d+(?:-\d+)?)/gi, // Ст. 99, статье 99
+  /(\d+(?:-\d+)?)\s*-\s*бап/gi, // 99-бап
+  /(?:art\.?|article)\s*(\d+(?:-\d+)?)/gi, // Art. 99, Article 99
+];
+
 export function validateAnswer(text: string, hits: SearchHit[]): boolean {
   const allowed = new Set(hits.map((h) => h.chunk.article));
-  const mentions = text.matchAll(/(?:ст\.?|стать[а-яё]+)\s*(\d+(?:-\d+)?)/gi);
-  for (const m of mentions) {
-    if (m[1] && allowed.has(m[1])) return true;
+  for (const re of CITE_PATTERNS) {
+    for (const m of text.matchAll(re)) {
+      if (m[1] && allowed.has(m[1])) return true;
+    }
   }
   return false;
 }

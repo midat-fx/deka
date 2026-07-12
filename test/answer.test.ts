@@ -56,4 +56,10 @@ describe('валидация ответа (grounded или брак)', () => {
   it('бракует ответ с цитатой на ЧУЖУЮ статью (не из фрагментов)', () => {
     expect(validateAnswer('Это регулирует Ст. 999.', hits)).toBe(false);
   });
+
+  it('принимает казахскую («718-бап») и английскую («Art. 718») формы', () => {
+    expect(validateAnswer('Шек 718-бапта белгіленген.', hits)).toBe(true);
+    expect(validateAnswer('The limit is set by Art. 718 of the code.', hits)).toBe(true);
+    expect(validateAnswer('See Article 720 for details.', hits)).toBe(true);
+  });
 });

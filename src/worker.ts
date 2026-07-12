@@ -21,6 +21,7 @@ import type { SqlExecutor } from './rag/vector-search';
 import { registerTurnover } from './bot/turnover-flow';
 import { D1Turnover, type D1TurnoverDB } from './store/turnover';
 import { registerDeadlines } from './bot/deadlines-flow';
+import { registerTextRouter } from './bot/text-router';
 import { D1Reminders, type D1RemindersDB } from './store/reminders';
 import { D1Prefs, type D1PrefsDB } from './store/prefs';
 import { dueReminders, renderReminder } from './domain/deadlines';
@@ -39,6 +40,7 @@ export interface Env {
 let bot: Bot | null = null;
 let telemetry: D1Telemetry | null = null;
 let handleUpdate: ((req: Request) => Promise<Response>) | null = null;
+const seenUpdates = new Set<number>();
 
 export default {
   async fetch(request: Request, env: Env, ctx: CtxLike): Promise<Response> {
@@ -64,16 +66,37 @@ export default {
       registerWizard(bot, telemetry, prefs);
       registerTurnover(bot, turnover, telemetry);
       registerDeadlines(bot, reminders, telemetry);
-      registerSearch(bot, index, telemetry, llm, retrieval, prefs); // после визарда: ловит свободный текст
+      // Роутер человеческих фраз и кнопок меню — ДО поиска.
+      registerTextRouter(bot, { prefs, turnover, reminders, telemetry });
+      registerSearch(bot, index, telemetry, llm, retrieval, prefs); // последним: ловит свободный текст
       bot.catch((err) => console.error('bot error:', err.error));
-      handleUpdate = webhookCallback(bot, 'cloudflare-mod') as (
-        req: Request,
-      ) => Promise<Response>;
+      // Дефолт grammy — 10s и throw: Telegram получает 500 и ретраит апдейт,
+      // сжигая квоту Gemini дважды. Даём запас (гибрид+LLM ≤ ~12s) и на
+      // таймауте отвечаем 200 — ретрай не нужен.
+      handleUpdate = webhookCallback(bot, 'cloudflare-mod', {
+        timeoutMilliseconds: 25_000,
+        onTimeout: 'return',
+      }) as (req: Request) => Promise<Response>;
     }
 
     const url = new URL(request.url);
     // Секретный путь = токен: Telegram знает его, посторонние — нет.
     if (request.method === 'POST' && url.pathname === `/${env.BOT_TOKEN}`) {
+      // Дедуп ретраев Telegram по update_id (память изолята, последние 200:
+      // ловит типичный ретрай в тёплый изолят; межизолятные дубли редки).
+      try {
+        const body = (await request.clone().json()) as { update_id?: number };
+        if (body.update_id !== undefined) {
+          if (seenUpdates.has(body.update_id)) return new Response('ok (dup)');
+          seenUpdates.add(body.update_id);
+          if (seenUpdates.size > 200) {
+            const first = seenUpdates.values().next().value;
+            if (first !== undefined) seenUpdates.delete(first);
+          }
+        }
+      } catch {
+        /* не JSON — пусть разбирается grammy */
+      }
       try {
         return await handleUpdate!(request);
       } finally {
@@ -85,6 +108,8 @@ export default {
 
   // Cron (см. wrangler.jsonc → triggers.crons): раз в сутки шлём напоминания
   // подписчикам о дедлайнах, до сдачи которых 7 или 1 день.
+  // Закалено: 403 (юзер заблокировал бота) → отписка, 429 → пауза retry_after,
+  // отправка пачками по 25 с паузой — лимит Telegram ~30 сообщений/сек.
   async scheduled(_event: unknown, env: Env, _ctx: CtxLike): Promise<void> {
     const today = new Date();
     const due = dueReminders(today);
@@ -92,24 +117,53 @@ export default {
     const reminders = new D1Reminders(env.DB as unknown as D1RemindersDB);
     const subs = await reminders.listSubscribers();
     if (subs.length === 0) return;
-    const sends: Promise<unknown>[] = [];
+
     for (const d of due) {
       const text = renderReminder(d, today);
-      for (const chatId of subs) sends.push(sendTelegram(env.BOT_TOKEN, chatId, text));
+      for (let i = 0; i < subs.length; i += 25) {
+        const chunk = subs.slice(i, i + 25);
+        await Promise.allSettled(
+          chunk.map((chatId) => sendReminder(env.BOT_TOKEN, chatId, text, reminders)),
+        );
+        if (i + 25 < subs.length) await sleep(1_100);
+      }
     }
-    await Promise.allSettled(sends);
   },
 };
 
-async function sendTelegram(token: string, chatId: number, text: string): Promise<void> {
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: 'HTML',
-      link_preview_options: { is_disabled: true },
-    }),
-  });
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function sendReminder(
+  token: string,
+  chatId: number,
+  text: string,
+  reminders: D1Reminders,
+): Promise<void> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML',
+        link_preview_options: { is_disabled: true },
+      }),
+    });
+    if (res.ok) return;
+    if (res.status === 403) {
+      // Юзер заблокировал бота — отписываем, чтобы не долбиться вечно.
+      await reminders.unsubscribe(chatId).catch(() => {});
+      return;
+    }
+    if (res.status === 429) {
+      const data = (await res.json().catch(() => null)) as {
+        parameters?: { retry_after?: number };
+      } | null;
+      await sleep(Math.min((data?.parameters?.retry_after ?? 3) * 1000, 30_000));
+      continue; // одна повторная попытка
+    }
+    console.error(`reminder to ${chatId} failed: ${res.status}`);
+    return;
+  }
 }

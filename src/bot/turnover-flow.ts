@@ -1,10 +1,11 @@
 /**
- * Команда /oborot — трекер оборота с алертами о лимитах.
- *   /oborot 500000   — записать доход и показать статус
- *   /oborot          — показать текущий оборот и близость к лимитам
- *   /oborot сброс    — обнулить учёт
+ * Трекер оборота:
+ *   /oborot 500000 — записать доход; /oborot — статус; /oborot сброс — обнулить
+ *   (сброс — только через inline-подтверждение: годовой учёт нельзя терять
+ *   по опечатке; после записи есть кнопка «отменить последнюю»).
+ * Хелперы sendTurnoverStatus/logIncome экспортируются — их зовёт и меню-роутер.
  */
-import type { Bot } from 'grammy';
+import { InlineKeyboard, type Bot, type Context } from 'grammy';
 import { assessTurnover, parseAmount, type TurnoverView } from '../domain/turnover';
 import { LIMITS_TENGE } from '../domain/regimes';
 import { formatTenge } from '../domain/format';
@@ -47,9 +48,48 @@ export function renderStatus(view: TurnoverView, monthName: string, year: number
   }
 
   lines.push('');
-  lines.push('<i>Записать доход: /oborot 500000 (можно «1.3 млн», «400 тыс»). Обнулить: /oborot сброс.</i>');
+  lines.push('<i>Записать доход: просто напиши сумму, например «500 000» или «1.3 млн». Кнопка ➕ в меню тоже работает.</i>');
   lines.push('<i>Данные анонимны (без имени), храним только суммы. Ориентир, не бухучёт.</i>');
   return lines.join('\n');
+}
+
+function periodNow(now: () => Date): { monthName: string; year: number } {
+  const d = now();
+  return { monthName: RU_MONTHS[d.getMonth()] ?? 'этот месяц', year: d.getFullYear() };
+}
+
+/** Показать статус оборота (используется /oborot и кнопкой меню). */
+export async function sendTurnoverStatus(
+  ctx: Context,
+  store: TurnoverStore,
+  uid: number,
+  now: () => Date = () => new Date(),
+): Promise<void> {
+  const totals = await store.totals(uid);
+  const { monthName, year } = periodNow(now);
+  const view = assessTurnover(totals.monthTotal, totals.yearTotal);
+  await ctx.reply(renderStatus(view, monthName, year), { parse_mode: 'HTML', ...NO_PREVIEW });
+}
+
+/** Записать доход и показать статус с кнопкой отмены (зовёт и intent-роутер). */
+export async function logIncome(
+  ctx: Context,
+  store: TurnoverStore,
+  uid: number,
+  amount: number,
+  now: () => Date = () => new Date(),
+): Promise<void> {
+  const totals = await store.add(uid, amount);
+  const { monthName, year } = periodNow(now);
+  const view = assessTurnover(totals.monthTotal, totals.yearTotal);
+  await ctx.reply(
+    `✅ Записал <b>+${formatTenge(amount)}</b>.\n\n${renderStatus(view, monthName, year)}`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: new InlineKeyboard().text('↩️ Отменить эту запись', 'turn|undo'),
+      ...NO_PREVIEW,
+    },
+  );
 }
 
 export function registerTurnover(
@@ -62,14 +102,18 @@ export function registerTurnover(
     const uid = ctx.from?.id;
     if (uid === undefined) return;
     const arg = (ctx.match ?? '').toString().trim();
-    const d = now();
-    const monthName = RU_MONTHS[d.getMonth()] ?? 'этот месяц';
-    const year = d.getFullYear();
 
     if (/^(сброс|reset|очистить|обнулить)$/i.test(arg)) {
-      await store.reset(uid);
-      telemetry?.track(uid, 'turnover', 'reset');
-      await ctx.reply('Обнулил твой учёт оборота. Начнём заново: /oborot 500000', NO_PREVIEW);
+      const totals = await store.totals(uid);
+      await ctx.reply(
+        `Точно обнулить весь учёт (<b>${formatTenge(totals.yearTotal)}</b> за год)? Это безвозвратно.`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: new InlineKeyboard()
+            .text('🗑 Да, обнулить', 'turn|reset')
+            .text('Отмена', 'turn|cancel'),
+        },
+      );
       return;
     }
 
@@ -82,19 +126,43 @@ export function registerTurnover(
         );
         return;
       }
-      const totals = await store.add(uid, amount);
       telemetry?.track(uid, 'turnover', 'add');
-      const view = assessTurnover(totals.monthTotal, totals.yearTotal);
-      await ctx.reply(
-        `✅ Записал <b>+${formatTenge(amount)}</b>.\n\n${renderStatus(view, monthName, year)}`,
-        { parse_mode: 'HTML', ...NO_PREVIEW },
-      );
+      await logIncome(ctx, store, uid, amount, now);
       return;
     }
 
-    const totals = await store.totals(uid);
     telemetry?.track(uid, 'turnover', 'show');
-    const view = assessTurnover(totals.monthTotal, totals.yearTotal);
-    await ctx.reply(renderStatus(view, monthName, year), { parse_mode: 'HTML', ...NO_PREVIEW });
+    await sendTurnoverStatus(ctx, store, uid, now);
+  });
+
+  bot.callbackQuery(/^turn\|/, async (ctx) => {
+    const uid = ctx.from?.id;
+    if (uid === undefined) return;
+    const action = (ctx.callbackQuery.data ?? '').split('|')[1];
+
+    if (action === 'reset') {
+      await store.reset(uid);
+      telemetry?.track(uid, 'turnover', 'reset');
+      await ctx.answerCallbackQuery('Учёт обнулён');
+      await ctx.editMessageText('Обнулил твой учёт оборота. Начнём заново: просто напиши сумму дохода.');
+      return;
+    }
+    if (action === 'cancel') {
+      await ctx.answerCallbackQuery('Отменено');
+      await ctx.editMessageText('Ок, ничего не трогаю. Учёт на месте.');
+      return;
+    }
+    if (action === 'undo') {
+      const removed = await store.undoLast(uid);
+      telemetry?.track(uid, 'turnover', 'undo');
+      await ctx.answerCallbackQuery(removed !== null ? 'Запись отменена' : 'Нечего отменять');
+      if (removed !== null) {
+        await ctx.editMessageText(
+          `↩️ Отменил запись <b>+${formatTenge(removed)}</b>. Статус: кнопка «📊 Мой оборот» в меню.`,
+          { parse_mode: 'HTML' },
+        );
+      }
+      return;
+    }
   });
 }

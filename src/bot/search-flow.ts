@@ -6,17 +6,30 @@
  * по построению. Следующий этап (LLM поверх этих фрагментов) добавит
  * человеческий пересказ — но цитата и ссылка останутся обязательными.
  */
-import type { Bot } from 'grammy';
+import { InlineKeyboard, type Bot, type Context } from 'grammy';
 import { SearchIndex, type SearchHit } from '../rag/search';
 import { chunkUrl } from '../rag/chunks';
 import { generateAnswer, type AnswerOptions } from '../rag/answer';
-import { hybridSearch, type SqlExecutor } from '../rag/vector-search';
-import { detectLang, SEARCH_REFUSAL, type Lang } from '../i18n/i18n';
+import { hybridSearchDetailed, type SqlExecutor } from '../rag/vector-search';
+import {
+  detectLang,
+  SEARCH_REFUSAL,
+  REFUSAL_EXAMPLES,
+  WIZARD_BUTTON,
+  KGD_BUTTON,
+  type Lang,
+} from '../i18n/i18n';
 import type { PrefsStore } from '../store/prefs';
 import type { EventTracker } from '../telemetry/types';
 
-/** Ниже этого балла считаем, что уверенного ответа в корпусе нет. */
+/** Ниже этого BM25-балла лексический поиск не уверен. */
 const MIN_TOP_SCORE = 7;
+/**
+ * Порог «спасения» вектором: если BM25 пуст, но косинус ≥ порога — тема
+ * в корпусе есть (например, казахский вопрос к русскому тексту). Грубая
+ * калибровка; уточняем по телеметрии rescued/refused_after_hybrid.
+ */
+const MIN_VECTOR_COSINE = 0.58;
 
 const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -46,6 +59,17 @@ export function renderSearchReply(hits: SearchHit[]): string {
 
 export function renderRefusal(lang: Lang = 'ru'): string {
   return SEARCH_REFUSAL[lang];
+}
+
+/** Кнопки под отказом: готовые вопросы (заведомо рабочие) + визард + КГД. */
+export function refusalKeyboard(lang: Lang): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  REFUSAL_EXAMPLES[lang].forEach((q, i) => {
+    kb.text(`💬 ${q}`, `ask|${lang}|${i}`).row();
+  });
+  kb.text(WIZARD_BUTTON[lang], 'w|---|restart|go').row();
+  kb.text(KGD_BUTTON[lang], 'noop|kgd');
+  return kb;
 }
 
 /** Уникальные статьи из ранжированного списка, максимум n (для показа источников). */
@@ -80,6 +104,74 @@ export function registerSearch(
   retrieval?: { sql: SqlExecutor; apiKey: string },
   prefs?: PrefsStore,
 ): void {
+  /** Общий путь ответа на вопрос — вызывается и текстом, и кнопкой-примером. */
+  const answerQuestion = async (
+    ctx: Context,
+    query: string,
+    uid: number | undefined,
+    lang: Lang,
+  ): Promise<void> => {
+    // «Печатаю…» сразу: гибридный поиск + LLM занимают секунды.
+    await ctx.replyWithChatAction('typing').catch(() => {});
+
+    // 1) Лексический кандидат.
+    const bm25 = index.search(query, 4);
+    let confident = bm25.length > 0 && bm25[0]!.score >= MIN_TOP_SCORE;
+
+    // 2) Гибрид (если подключён Neon): и контекст для LLM, и спасение отказа
+    //    вектором — BM25 не видит перефразировок и казахских вопросов.
+    let llmHits: SearchHit[] = [];
+    let rescued = false;
+    if (retrieval) {
+      const detailed = await hybridSearchDetailed(index, retrieval.sql, query, 8, {
+        apiKey: retrieval.apiKey,
+        pool: 12,
+      });
+      llmHits = detailed.hits;
+      if (!confident && detailed.topCosine !== null && detailed.topCosine >= MIN_VECTOR_COSINE) {
+        confident = true;
+        rescued = true;
+      }
+    }
+    if (llmHits.length === 0) llmHits = index.search(query, 8, { dedupeByArticle: false });
+
+    telemetry?.track(
+      uid,
+      'search',
+      confident
+        ? `${rescued ? 'rescued_by_vector' : 'ok'};top=${(llmHits[0] ?? bm25[0])?.chunk.article ?? '-'}`
+        : `refused_after_hybrid;bm25=${bm25[0]?.score.toFixed(1) ?? '0'}`,
+    );
+
+    if (!confident) {
+      await ctx.reply(renderRefusal(lang), {
+        reply_markup: refusalKeyboard(lang),
+        link_preview_options: { is_disabled: true },
+      });
+      return;
+    }
+
+    const sourceHits = topByArticle(llmHits, 4);
+
+    // С LLM — человеческий пересказ (grounded или откат к дословным
+    // фрагментам); без LLM — сразу фрагменты. Таймаут 8с: мы внутри вебхука.
+    let reply = renderSearchReply(sourceHits);
+    if (llm) {
+      const out = await generateAnswer(query, llmHits, {
+        ...llm,
+        lang,
+        timeoutMs: llm.timeoutMs ?? 8_000,
+      });
+      telemetry?.track(uid, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
+      if (out.kind === 'answered') reply = renderAnswer(out.text, sourceHits);
+    }
+
+    await ctx.reply(reply, {
+      parse_mode: 'HTML',
+      link_preview_options: { is_disabled: true },
+    });
+  };
+
   // Сам текст вопроса НЕ логируем (приватность) — только метрики качества.
   bot.on('message:text', async (ctx) => {
     if (ctx.message.text.startsWith('/')) return;
@@ -88,52 +180,20 @@ export function registerSearch(
     // Язык: сохранённый выбор (/til) важнее, иначе — по буквам вопроса.
     const lang: Lang =
       (prefs && uid !== undefined ? await prefs.getLang(uid) : undefined) ?? detectLang(query);
-    // 4 статьи-кандидата: LLM получает больше контекста (окно у моделей
-    // огромное), а пользователю в источниках 4 ссылки ещё читабельны.
-    const hits = index.search(query, 4);
-    const confident = hits.length > 0 && hits[0]!.score >= MIN_TOP_SCORE;
-
-    telemetry?.track(
-      ctx.from?.id,
-      'search',
-      confident
-        ? `hits=${hits.length};top=${hits[0]!.chunk.article};score=${hits[0]!.score.toFixed(1)}`
-        : `refused;score=${hits[0]?.score.toFixed(1) ?? '0'}`,
-    );
-
-    if (!confident) {
-      await ctx.reply(renderRefusal(lang), { link_preview_options: { is_disabled: true } });
-      return;
-    }
-
-    // Ретривал для ответа: гибрид BM25+вектор, если подключён Neon; иначе BM25.
-    // Топ-8 кусков без склейки по статьям (лимит и его последствия часто в
-    // соседних пунктах одной статьи).
-    let llmHits: SearchHit[];
-    if (retrieval) {
-      const fused = await hybridSearch(index, retrieval.sql, query, 8, {
-        apiKey: retrieval.apiKey,
-        pool: 12,
-      });
-      llmHits = fused.length > 0 ? fused : index.search(query, 8, { dedupeByArticle: false });
-    } else {
-      llmHits = index.search(query, 8, { dedupeByArticle: false });
-    }
-    const sourceHits = topByArticle(llmHits, 4);
-
-    // С LLM — человеческий пересказ (grounded или откат к дословным
-    // фрагментам); без LLM — сразу фрагменты.
-    let reply = renderSearchReply(sourceHits);
-    if (llm) {
-      await ctx.replyWithChatAction('typing');
-      const out = await generateAnswer(query, llmHits, { ...llm, lang });
-      telemetry?.track(ctx.from?.id, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
-      if (out.kind === 'answered') reply = renderAnswer(out.text, sourceHits);
-    }
-
-    await ctx.reply(reply, {
-      parse_mode: 'HTML',
-      link_preview_options: { is_disabled: true },
-    });
+    await answerQuestion(ctx, query, uid, lang);
   });
+
+  // Кнопка-пример под отказом: прогоняем готовый вопрос через тот же путь.
+  bot.callbackQuery(/^ask\|/, async (ctx) => {
+    const parts = (ctx.callbackQuery.data ?? '').split('|');
+    const lang = (parts[1] ?? 'ru') as Lang;
+    const idx = Number(parts[2] ?? '0');
+    const q = REFUSAL_EXAMPLES[lang]?.[idx];
+    await ctx.answerCallbackQuery();
+    if (!q) return;
+    telemetry?.track(ctx.from?.id, 'intent', 'refusal_example');
+    await answerQuestion(ctx, q, ctx.from?.id, lang);
+  });
+
+  bot.callbackQuery(/^noop\|/, (ctx) => ctx.answerCallbackQuery());
 }

@@ -61,30 +61,39 @@ export interface HybridOptions {
   dedupeByArticle?: boolean;
 }
 
+export interface HybridResult {
+  hits: SearchHit[];
+  /** Лучшая косинусная близость векторного поиска (0..1); null — вектор не отработал. */
+  topCosine: number | null;
+}
+
 /**
  * Гибридный поиск: BM25 (локально) + вектор (Neon), слияние RRF.
- * Возвращает до k результатов как SearchHit (chunk + RRF-балл).
- * Если векторный источник недоступен (нет ключа/сети) — тихо откатывается
- * к чистому BM25: поиск обязан работать всегда.
+ * Отдаёт и topCosine: по нему решается «спасение» отказа — BM25 по словам
+ * ничего не нашёл (например, казахский вопрос к русскому корпусу), а вектор
+ * по смыслу нашёл уверенно. Если векторный источник недоступен — тихо
+ * откатывается к чистому BM25: поиск обязан работать всегда.
  */
-export async function hybridSearch(
+export async function hybridSearchDetailed(
   index: SearchIndex,
   sql: SqlExecutor,
   query: string,
   k: number,
   opts: HybridOptions,
-): Promise<SearchHit[]> {
+): Promise<HybridResult> {
   const pool = opts.pool ?? 12;
   const bm25 = index.search(query, pool, { dedupeByArticle: false });
 
   let vecIds: string[] = [];
+  let topCosine: number | null = null;
   try {
     const emb = await embedQuery(query, opts.apiKey);
     const vec = await vectorSearchIds(sql, emb, pool);
     vecIds = vec.map((v) => v.id);
+    topCosine = vec[0]?.score ?? null;
   } catch (err) {
     console.error('vector search failed, откат к BM25:', err);
-    return index.search(query, k, { dedupeByArticle: opts.dedupeByArticle });
+    return { hits: index.search(query, k, { dedupeByArticle: opts.dedupeByArticle }), topCosine: null };
   }
 
   const fused = reciprocalRankFusion([bm25.map((h) => h.chunk.id), vecIds]);
@@ -93,7 +102,7 @@ export async function hybridSearch(
     .filter((h): h is SearchHit => h.chunk !== undefined)
     .sort((a, b) => b.score - a.score);
 
-  if (!opts.dedupeByArticle) return ranked.slice(0, k);
+  if (!opts.dedupeByArticle) return { hits: ranked.slice(0, k), topCosine };
 
   const seen = new Set<string>();
   const out: SearchHit[] = [];
@@ -103,5 +112,16 @@ export async function hybridSearch(
     out.push(h);
     if (out.length === k) break;
   }
-  return out;
+  return { hits: out, topCosine };
+}
+
+/** Старый интерфейс без деталей (используется eval-скриптом). */
+export async function hybridSearch(
+  index: SearchIndex,
+  sql: SqlExecutor,
+  query: string,
+  k: number,
+  opts: HybridOptions,
+): Promise<SearchHit[]> {
+  return (await hybridSearchDetailed(index, sql, query, k, opts)).hits;
 }

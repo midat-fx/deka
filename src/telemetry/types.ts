@@ -15,7 +15,8 @@ export type EventName =
   | 'answer' // LLM-пересказ (detail: answered | no_answer | error:<причина>)
   | 'turnover' // трекер оборота (detail: add | show | reset)
   | 'deadlines' // дедлайны/напоминания (detail: show | sub | unsub)
-  | 'lang'; // смена языка (detail: ru | kk)
+  | 'lang' // смена языка (detail: ru | kk | en)
+  | 'intent'; // сработал текст-роутер (detail: menu:* | set_lang | log_income | …)
 
 export interface EventTracker {
   /** Записать событие. Никогда не бросает — телеметрия не роняет бота. */
