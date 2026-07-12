@@ -20,6 +20,8 @@ import indexData from '../data/corpus/index.json';
 
 export interface Env {
   BOT_TOKEN: string;
+  GEMINI_API_KEY?: string;
+  GEMINI_MODEL?: string;
   TELEMETRY_SALT?: string;
   DB: D1Like;
 }
@@ -36,9 +38,12 @@ export default {
     if (!bot) {
       const index = SearchIndex.fromSerialized(indexData as unknown as SerializedIndex);
       telemetry = new D1Telemetry(env.DB, env.TELEMETRY_SALT ?? 'deka-mvp-salt');
+      const llm = env.GEMINI_API_KEY
+        ? { apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL }
+        : undefined;
       bot = new Bot(env.BOT_TOKEN);
       registerWizard(bot, telemetry);
-      registerSearch(bot, index, telemetry); // после визарда: ловит свободный текст
+      registerSearch(bot, index, telemetry, llm); // после визарда: ловит свободный текст
       bot.catch((err) => console.error('bot error:', err.error));
       handleUpdate = webhookCallback(bot, 'cloudflare-mod') as (
         req: Request,
