@@ -24,7 +24,8 @@ export type EventName =
   | 'wizard_answer' // ответил на вопрос визарда (detail: поле=значение)
   | 'wizard_result' // дошёл до рекомендации (detail: какой режим)
   | 'wizard_restart' // нажал «пройти заново»
-  | 'free_text'; // написал свободный текст (detail: длина, сам текст не храним)
+  | 'free_text' // (устар.) свободный текст до появления поиска
+  | 'search'; // поиск по кодексу (detail: hits/top/score либо refused; сам текст не храним)
 
 export class Telemetry {
   private db: DatabaseSync;

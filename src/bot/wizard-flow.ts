@@ -100,8 +100,10 @@ export function registerWizard(bot: Bot, telemetry?: Telemetry): void {
   bot.command('help', async (ctx) => {
     telemetry?.track(ctx.from?.id, 'help');
     await ctx.reply(
-      'Сейчас я подбираю налоговый режим для ИП/самозанятых по НК РК-2026 — жми /start.\n\n' +
-        'Скоро добавлю ответы на свободные вопросы с цитатами из первоисточника (adilet.zan.kz).',
+      'Что я умею:\n' +
+        '• /start — подобрать налоговый режим (самозанятый / упрощёнка / общий)\n' +
+        '• Просто напиши вопрос — найду ответ в тексте НК РК-2026 и покажу дословные фрагменты со ссылками на статьи\n\n' +
+        'Например: «какой лимит у самозанятого», «когда вставать на учёт по НДС», «сроки сдачи упрощённой декларации».',
       NO_PREVIEW,
     );
   });
@@ -150,15 +152,6 @@ export function registerWizard(bot: Bot, telemetry?: Telemetry): void {
     }
   });
 
-  // Свободный текст — сюда позже приедет RAG. Пока мягко направляем в визард.
-  // Сам текст НЕ логируем (приватность) — только факт и длину: это мера спроса на RAG.
-  bot.on('message:text', async (ctx) => {
-    if (ctx.message.text.startsWith('/')) return;
-    telemetry?.track(ctx.from?.id, 'free_text', `len=${ctx.message.text.length}`);
-    await ctx.reply(
-      'Пока я умею подбирать налоговый режим — жми /start.\n\n' +
-        'Ответы на свободные вопросы по НК РК-2026 (с цитатами из первоисточника) — следующий этап.',
-      NO_PREVIEW,
-    );
-  });
+  // Свободный текст обрабатывает registerSearch (src/bot/search-flow.ts) —
+  // он должен быть зарегистрирован ПОСЛЕ визарда.
 }

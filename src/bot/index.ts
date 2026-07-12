@@ -1,6 +1,9 @@
 import { Bot } from 'grammy';
 import { registerWizard } from './wizard-flow';
+import { registerSearch } from './search-flow';
 import { createTelemetry } from '../telemetry/events';
+import { loadChunks } from '../rag/chunks';
+import { SearchIndex } from '../rag/search';
 
 // Node ≥20.12 умеет читать .env сам. Если файла нет — не страшно,
 // переменные могут быть заданы в окружении (или в проде через секреты).
@@ -19,7 +22,11 @@ if (!token) {
 
 const bot = new Bot(token);
 const telemetry = createTelemetry();
+const searchIndex = new SearchIndex(loadChunks());
+console.log(`📚 Индекс кодекса: ${searchIndex.size} чанков`);
+
 registerWizard(bot, telemetry);
+registerSearch(bot, searchIndex, telemetry); // после визарда: он ловит свободный текст
 bot.catch((err) => console.error('Ошибка в боте:', err.error));
 
 console.log('🤖 Deka запускается…');
