@@ -8,7 +8,8 @@
  */
 import { InlineKeyboard, type Bot, type Context } from 'grammy';
 import { routeIntent } from './router';
-import { mainKeyboard, resultKeyboard } from './keyboard';
+import { mainKeyboard, resultKeyboard, shareUrl } from './keyboard';
+import { renderCard } from '../domain/card';
 import { sendWizardStart, languageKeyboard } from './wizard-flow';
 import { sendTurnoverStatus, logIncome } from './turnover-flow';
 import { sendDeadlinesView } from './deadlines-flow';
@@ -36,6 +37,8 @@ import {
   PRIVACY_YES,
   PRIVACY_DONE,
   FACTCHECK_PROMPT,
+  MENU,
+  SHARE_BTN,
   type Lang,
 } from '../i18n/i18n';
 import type { PrefsStore } from '../store/prefs';
@@ -56,6 +59,25 @@ export async function sendForm910(
   await ctx.reply(renderForm910(totals.yearTotal > 0 ? totals.yearTotal : null, lang), {
     parse_mode: 'HTML',
     reply_markup: resultKeyboard(lang, { remind: true }),
+    ...NO_PREVIEW,
+  });
+}
+
+/** «Моя карточка»: режим (из prefs) + лимит + дедлайн + налог одним экраном. */
+export async function sendCard(
+  ctx: Context,
+  turnover: TurnoverStore,
+  prefs: PrefsStore | undefined,
+  uid: number,
+  lang: Lang,
+): Promise<void> {
+  const regime = prefs ? await prefs.getRegime(uid) : undefined;
+  const totals = await turnover.totals(uid);
+  const kb = new InlineKeyboard().text(MENU.wizard[lang], 'w|---|restart|go');
+  if (regime) kb.row().url(SHARE_BTN[lang], shareUrl(lang));
+  await ctx.reply(renderCard(regime, totals.monthTotal, totals.yearTotal, new Date(), lang), {
+    parse_mode: 'HTML',
+    reply_markup: kb,
     ...NO_PREVIEW,
   });
 }
@@ -221,6 +243,13 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
     });
   });
 
+  bot.command('card', async (ctx) => {
+    const uid = ctx.from?.id;
+    if (uid === undefined) return;
+    telemetry?.track(uid, 'intent', 'card');
+    await sendCard(ctx, turnover, prefs, uid, await langOf(uid));
+  });
+
   bot.command('settings', async (ctx) => {
     const uid = ctx.from?.id;
     if (uid === undefined) return;
@@ -326,6 +355,8 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
         return sendTurnoverStatus(ctx, turnover, uid, lang);
       case 'dedlayny':
         return sendDeadlinesView(ctx, reminders, uid, lang);
+      case 'card':
+        return sendCard(ctx, turnover, prefs, uid, lang);
     }
   });
 

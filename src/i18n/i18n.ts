@@ -428,7 +428,12 @@ export const DEADLINES_UI = {
     en: 'No upcoming deadlines in my list right now.',
   },
   inDays: { ru: (d: string) => `через ${d}`, kk: (d: string) => `${d} қалды`, en: (d: string) => `in ${d}` },
-  lastDay: { ru: 'сегодня последний день', kk: 'бүгін соңғы күн', en: 'today is the last day' },
+  lastDay: { ru: 'сегодня последний день сдачи', kk: 'бүгін тапсырудың соңғы күні', en: 'today is the last day to file' },
+  submitOver: {
+    ru: (d: string) => `срок сдачи прошёл — уплати налог до ${d}`,
+    kk: (d: string) => `тапсыру мерзімі өтті — салықты ${d} дейін төле`,
+    en: (d: string) => `filing deadline passed — pay the tax by ${d}`,
+  },
   submitBy: { ru: (d: string) => `Сдать до ${d}`, kk: (d: string) => `Тапсыру мерзімі: ${d}`, en: (d: string) => `File by ${d}` },
   payBy: { ru: (d: string) => `, уплатить до ${d}`, kk: (d: string) => `, төлеу мерзімі: ${d}`, en: (d: string) => `, pay by ${d}` },
   footer: {
@@ -708,3 +713,61 @@ export const REMIND910_BTN: Record<Lang, string> = {
   kk: '🔔 910 мерзімін еске салу',
   en: '🔔 Remind me of the 910 dates',
 };
+
+// ── «Моя налоговая карточка» (B1) — режим+лимит+дедлайн+налог в одном экране ──
+/** Короткие названия режимов (только имена, не юр-условия — их локализуем позже). */
+export const REGIME_NAME: Record<string, Record<Lang, string>> = {
+  self_employed: { ru: 'Самозанятый', kk: 'Өзін-өзі жұмыспен қамтыған', en: 'Self-employed' },
+  simplified: { ru: 'Упрощёнка', kk: 'Оңайлатылған', en: 'Simplified' },
+  general: { ru: 'Общеустановленный', kk: 'Жалпыға белгіленген', en: 'General regime' },
+};
+
+export const CARD = {
+  title: { ru: '📇 <b>Твоя налоговая карточка</b>', kk: '📇 <b>Сенің салық картаң</b>', en: '📇 <b>Your tax card</b>' },
+  regime: {
+    ru: (n: string) => `<b>Режим:</b> ${n}`,
+    kk: (n: string) => `<b>Режим:</b> ${n}`,
+    en: (n: string) => `<b>Regime:</b> ${n}`,
+  },
+  noRegime: {
+    ru: 'Сначала подбери режим — нажми «🧮 Какой режим мне», и карточка соберётся под тебя.',
+    kk: 'Алдымен режим таңда — «🧮 Қай режим маған» бас, сонда карта саған жиналады.',
+    en: 'Pick a regime first — tap «🧮 My tax regime», and the card will be tailored to you.',
+  },
+  limitLine: {
+    ru: (label: string, pct: number, total: string, limit: string) =>
+      `<b>${label}:</b> ${pct}% — ${total} из ${limit}`,
+    kk: (label: string, pct: number, total: string, limit: string) =>
+      `<b>${label}:</b> ${pct}% — ${total} / ${limit}`,
+    en: (label: string, pct: number, total: string, limit: string) =>
+      `<b>${label}:</b> ${pct}% — ${total} of ${limit}`,
+  },
+  limitLabelSE: { ru: 'Лимит месяца (самозанятый)', kk: 'Ай шегі', en: 'Monthly limit' },
+  limitLabelVat: { ru: 'Порог НДС за год', kk: 'ҚҚС шегі (жыл)', en: 'VAT threshold (year)' },
+  deadline: {
+    ru: (title: string, when: string) => `<b>Ближайший срок:</b> ${title} — ${when}`,
+    kk: (title: string, when: string) => `<b>Жақын мерзім:</b> ${title} — ${when}`,
+    en: (title: string, when: string) => `<b>Next deadline:</b> ${title} — ${when}`,
+  },
+  taxSE: {
+    ru: '<b>Налог:</b> ИПН 0% (Ст. 720) + соцплатежи через e-Salyq (вне НК)',
+    kk: '<b>Салық:</b> ЖТС 0% (720-бап) + e-Salyq арқылы әлеуметтік төлемдер (НК-ден тыс)',
+    en: '<b>Tax:</b> income tax 0% (Art. 720) + social payments via e-Salyq (outside the code)',
+  },
+  taxSimp: {
+    ru: (tax: string) => `<b>Налог (прикидка):</b> 4% ≈ ${tax} за год (Ст. 726)`,
+    kk: (tax: string) => `<b>Салық (болжам):</b> жылына 4% ≈ ${tax} (726-бап)`,
+    en: (tax: string) => `<b>Tax (estimate):</b> 4% ≈ ${tax} per year (Art. 726)`,
+  },
+  taxGen: {
+    ru: '<b>Налог:</b> ИПН/КПН по общим правилам с чистого дохода',
+    kk: '<b>Салық:</b> таза табыстан ЖТС/КТС жалпы ережемен',
+    en: '<b>Tax:</b> income/corporate tax under the general rules on net income',
+  },
+  footer: {
+    ru: '<i>Собрано из твоих данных и статей НК РК-2026. Обнови оборот суммой в чате, режим — «🧮 Какой режим мне». Ориентир, не бухучёт.</i>',
+    kk: '<i>Сенің деректерің мен ҚР СК-2026 баптарынан жиналды. Айналымды чатта сомамен жаңарт, режимді — «🧮 Қай режим маған». Бағдар, бухгалтерия емес.</i>',
+    en: '<i>Assembled from your data and 2026 Tax Code articles. Update turnover by typing a sum, regime via «🧮 My tax regime». Guidance, not bookkeeping.</i>',
+  },
+  cardBtn: { ru: '📇 Моя карточка', kk: '📇 Менің картам', en: '📇 My card' },
+} satisfies Record<string, unknown>;

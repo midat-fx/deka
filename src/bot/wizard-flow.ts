@@ -74,6 +74,7 @@ function renderStep(s: FlowStep, state: string): { text: string; kb: InlineKeybo
 
 function resultKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
+    .text('📇 Моя карточка', 'nav|card')
     .text('🔄 Пройти заново', 'w|---|restart|go')
     .row()
     .url('📋 Список видов деятельности (самозанятые)', SOURCES.selfEmployedList.url);
@@ -211,6 +212,9 @@ export function registerWizard(bot: Bot, telemetry?: EventTracker, prefs?: Prefs
       });
     } else {
       const rec = recommendRegime(answers as WizardAnswers);
+      // Запоминаем режим для «Моей карточки». needs_human → сбрасываем в '',
+      // иначе карточка показывала бы устаревший режим от прошлого прохождения.
+      if (prefs) await prefs.setRegime(userId, rec.primary === 'needs_human' ? '' : String(rec.primary));
       telemetry?.track(userId, 'wizard_result', String(rec.primary));
       await ctx.editMessageText(renderRecommendation(rec), {
         parse_mode: 'HTML',

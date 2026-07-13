@@ -26,11 +26,14 @@ CREATE TABLE IF NOT EXISTS reminder_subs (
   subscribed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Языковая настройка пользователя (хэш id → ru/kk)
+-- Настройки пользователя (хэш id → язык + выбранный режим для «Моей карточки»)
 CREATE TABLE IF NOT EXISTS user_prefs (
   user_hash TEXT PRIMARY KEY,
-  lang TEXT NOT NULL
+  lang TEXT NOT NULL,
+  regime TEXT
 );
+-- Миграция для БД, созданных до колонки regime (на новой БД — no-op с ошибкой):
+--   wrangler d1 execute deka-telemetry --remote --command "ALTER TABLE user_prefs ADD COLUMN regime TEXT"
 
 -- Кэш LLM-ответов (ключ = стем-токены+язык) и дневной лимит вопросов
 CREATE TABLE IF NOT EXISTS answer_cache (

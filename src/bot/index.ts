@@ -64,6 +64,7 @@ await bot.start({
       { command: '910', description: 'Форма 910: сроки и расчёт налога' },
       { command: 'nds', description: 'Посчитать НДС 16% с суммы' },
       { command: 'proverit', description: 'Проверить ответ ChatGPT по кодексу' },
+      { command: 'card', description: 'Моя карточка: режим, лимит, дедлайн, налог' },
       { command: 'oborot', description: 'Оборот и близость к лимитам' },
       { command: 'dedlayny', description: 'Налоговые дедлайны и напоминания' },
       { command: 'til', description: 'Тіл / язык (қазақша · русский)' },

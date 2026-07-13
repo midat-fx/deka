@@ -77,10 +77,26 @@ export function dueReminders(
 // --- Отрисовка (чистые функции, без Telegram — переиспользуются ботом и cron) ---
 
 /** Заголовок и пояснение дедлайна на нужном языке (ru — из самого Deadline). */
-function localized(d: Deadline, lang: Lang): { title: string; note: string } {
+export function localizeDeadline(d: Deadline, lang: Lang): { title: string; note: string } {
   const o = DEADLINE_I18N[d.id];
   if (!o || lang === 'ru') return { title: d.title, note: d.note };
   return { title: o.title[lang] ?? d.title, note: o.note[lang] ?? d.note };
+}
+
+/**
+ * Локализованное «когда» для дедлайна — три состояния, а не два:
+ *   > 0  → «через N дней»
+ *   = 0  → «сегодня последний день сдачи»
+ *   < 0  → срок сдачи прошёл, но окно уплаты (payDate) ещё открыто —
+ *          «уплати до <payDate>» (upcomingDeadlines держит дедлайн до payDate).
+ * Раньше отрицательный случай ошибочно показывал «сегодня последний день».
+ */
+export function deadlineWhen(u: UpcomingDeadline, lang: Lang = 'ru'): string {
+  const ui = DEADLINES_UI;
+  if (u.daysToSubmit > 0) return ui.inDays[lang](pluralDaysI18n(u.daysToSubmit, lang));
+  if (u.daysToSubmit === 0) return ui.lastDay[lang];
+  const pay = u.deadline.payDate;
+  return pay ? ui.submitOver[lang](formatDateI18n(pay, lang)) : ui.lastDay[lang];
 }
 
 export function renderUpcoming(today: Date, lang: Lang = 'ru'): string {
@@ -92,8 +108,8 @@ export function renderUpcoming(today: Date, lang: Lang = 'ru'): string {
   } else {
     for (const u of up) {
       const d = u.deadline;
-      const { title, note } = localized(d, lang);
-      const when = u.daysToSubmit > 0 ? ui.inDays[lang](pluralDaysI18n(u.daysToSubmit, lang)) : ui.lastDay[lang];
+      const { title, note } = localizeDeadline(d, lang);
+      const when = deadlineWhen(u, lang);
       lines.push(`• <b>${title}</b> — ${when}`);
       const pay = d.payDate ? ui.payBy[lang](formatDateI18n(d.payDate, lang)) : '';
       lines.push(`  ${ui.submitBy[lang](formatDateI18n(d.submitDate, lang))}${pay}`);
@@ -108,7 +124,7 @@ export function renderUpcoming(today: Date, lang: Lang = 'ru'): string {
 export function renderReminder(deadline: Deadline, today: Date, lang: Lang = 'ru'): string {
   const ui = DEADLINES_UI;
   const days = daysUntil(today, deadline.submitDate);
-  const { title, note } = localized(deadline, lang);
+  const { title, note } = localizeDeadline(deadline, lang);
   const pay = deadline.payDate ? ui.payBy[lang](formatDateI18n(deadline.payDate, lang)) : '';
   return (
     `${ui.reminderTitle[lang]}\n\n` +
