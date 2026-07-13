@@ -35,6 +35,7 @@ import {
   PRIVACY_CONFIRM,
   PRIVACY_YES,
   PRIVACY_DONE,
+  FACTCHECK_PROMPT,
   type Lang,
 } from '../i18n/i18n';
 import type { PrefsStore } from '../store/prefs';
@@ -168,6 +169,12 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
 
       case 'setaside':
         await ctx.reply(renderSetAside(intent.amount, lang), { parse_mode: 'HTML', ...NO_PREVIEW });
+        return;
+
+      case 'factcheck':
+        // Просим вставить ответ ИИ ответом на это сообщение (force_reply —
+        // маркер: сам фактчек ловит reply_to в search-flow, где есть LLM).
+        await ctx.reply(FACTCHECK_PROMPT[lang], { reply_markup: { force_reply: true } });
         return;
 
       case 'deadlines':

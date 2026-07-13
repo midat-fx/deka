@@ -61,6 +61,7 @@ export const HELP: Record<Lang, string> = {
     '• «какой режим мне подходит» — подбор режима\n' +
     '• «заработал 500 тысяч» — запишу доход и сверю с лимитами\n' +
     '• «ндс с 500000» — посчитаю НДС 16%; «сколько отложить с 300000» — прикину налог\n' +
+    '• «проверь ответ chatgpt» — сверю чужой ответ ИИ с кодексом и покажу ошибки\n' +
     '• «дедлайны» — сроки и напоминания\n' +
     '• «переключи на казахский / english» — сменю язык\n' +
     '• Любой вопрос по налогам — найду ответ в кодексе со ссылками на статьи.',
@@ -69,6 +70,7 @@ export const HELP: Record<Lang, string> = {
     '• «маған қай режим келеді» — режим таңдау\n' +
     '• «500 мың таптым» — табысты жазып, шектермен салыстырамын\n' +
     '• «500000-нан ққс» — ҚҚС 16% есептеймін; «300000-нан қанша бөлу» — салықты болжаймын\n' +
+    '• «chatgpt жауабын тексер» — ЖИ жауабын кодекспен салыстырамын\n' +
     '• «мерзімдер» — мерзімдер мен еске салулар\n' +
     '• «орысша сөйле / english» — тілді ауыстырамын\n' +
     '• Салық туралы кез келген сұрақ — кодекстен баптарға сілтемемен жауап табамын.',
@@ -77,6 +79,7 @@ export const HELP: Record<Lang, string> = {
     '• "which regime fits me" — regime wizard\n' +
     '• "earned 500000" — I will log income and check limits\n' +
     '• "vat on 500000" — I calculate 16% VAT; "how much to set aside from 300000" — tax estimate\n' +
+    '• "check chatgpt answer" — I verify an AI answer against the code\n' +
     '• "deadlines" — dates and reminders\n' +
     '• "switch to Russian / қазақша" — change language\n' +
     '• Any tax question — I will find the answer in the code with article references.',
@@ -496,6 +499,36 @@ export const SEARCH_UI = {
     en: '<i>The answer is based on the cited articles of the 2026 Tax Code and is not tax advice.</i>',
   },
 } satisfies Record<string, Record<Lang, string>>;
+
+/** Бейдж «ставки сверены» — когда каждая ставка в ответе есть в тексте статей (F1). */
+export const VERIFIED_BADGE: Record<Lang, string> = {
+  ru: '✅ Ставки в ответе сверены с текстом кодекса.',
+  kk: '✅ Жауаптағы мөлшерлемелер кодекс мәтінімен тексерілді.',
+  en: '✅ The rates in this answer are verified against the code text.',
+};
+
+// ── Фактчекер «Проверь ответ ChatGPT» (Q5 — прямой ответ на «зачем не ГПТ») ──
+/** Текст-приглашение вставить ответ ИИ (он же — маркер force_reply). */
+export const FACTCHECK_PROMPT: Record<Lang, string> = {
+  ru: '🔍 Вставь ответ ChatGPT (или любого ИИ) про налоги — я сверю каждую цифру и статью с кодексом и покажу, где он ошибся.\n\n👉 Ответь на это сообщение текстом ответа.',
+  kk: '🔍 Салық туралы ChatGPT (немесе кез келген ЖИ) жауабын қой — әр санды кодекспен салыстырып, қателерін көрсетемін.\n\n👉 Осы хабарламаға жауап ретінде мәтінді жіберіңіз.',
+  en: '🔍 Paste a ChatGPT (or any AI) answer about taxes — I\'ll check every number and article against the code and show where it\'s wrong.\n\n👉 Reply to this message with the answer text.',
+};
+export const FACTCHECK_TITLE: Record<Lang, string> = {
+  ru: '🔍 <b>Проверка по НК РК-2026:</b>',
+  kk: '🔍 <b>ҚР СК-2026 бойынша тексеру:</b>',
+  en: '🔍 <b>Checked against the 2026 Tax Code:</b>',
+};
+export const FACTCHECK_NOCODE: Record<Lang, string> = {
+  ru: '🤷 В моих разделах кодекса не нашлось того, что нужно, чтобы честно проверить этот текст. Не берусь судить наугад — уточни у КГД (1414) или бухгалтера.',
+  kk: '🤷 Бұл мәтінді адал тексеру үшін қажет нәрсе менің бөлімдерімде табылмады. Кездейсоқ айтпаймын — МКК (1414) не бухгалтерден нақтылаңыз.',
+  en: "🤷 My sections of the code don't have what's needed to honestly check this text. I won't guess — check with the tax office (1414) or an accountant.",
+};
+export const FACTCHECK_DISCLAIMER: Record<Lang, string> = {
+  ru: '<i>Проверка по приведённым статьям НК РК-2026. «⚠️ не могу проверить» = темы нет в моих разделах, а не «неверно».</i>',
+  kk: '<i>Тексеру көрсетілген ҚР СК-2026 баптары бойынша. «⚠️ тексере алмаймын» = тақырып бөлімдерімде жоқ, «қате» дегенді білдірмейді.</i>',
+  en: '<i>Checked against the cited 2026 Tax Code articles. «⚠️ can\'t verify» means the topic isn\'t in my sections, not «wrong».</i>',
+};
 
 // ── Форма 910 (сезонный магнит) ────────────────────────────────────────────
 type Lnk = string; // готовая HTML-ссылка на статью

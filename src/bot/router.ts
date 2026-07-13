@@ -22,6 +22,7 @@ export type Intent =
   | { kind: 'log_income'; amount: number }
   | { kind: 'vat'; amount: number } // «ндс с 500000» — калькулятор НДС 16%
   | { kind: 'setaside'; amount: number } // «сколько отложить с 300000»
+  | { kind: 'factcheck' } // «проверь ответ ChatGPT» — запуск фактчекера
   | { kind: 'deadlines' }
   | { kind: 'form910' }
   | { kind: 'wizard' };
@@ -77,6 +78,11 @@ export function routeIntent(text: string): Intent | null {
   }
   if (/^(смени|поменяй|переключи)\s+(язык|тіл)|change language|тілді ауыстыр/i.test(t)) {
     return { kind: 'choose_lang' };
+  }
+
+  // 2a. Запуск фактчекера: «проверь ответ», «проверить ответ gpt/chatgpt».
+  if (/^провер(ь|ить)\s+ответ|провер(ь|ить).{0,15}(gpt|гпт|chatgpt|нейросет|ии)/i.test(t)) {
+    return { kind: 'factcheck' };
   }
 
   // 3. Голое подтверждение без контекста — не в поиск.

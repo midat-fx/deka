@@ -18,6 +18,12 @@ import {
   WIZARD_BUTTON,
   KGD_BUTTON,
   SEARCH_UI,
+  VERIFIED_BADGE,
+  FACTCHECK_PROMPT,
+  FACTCHECK_TITLE,
+  FACTCHECK_NOCODE,
+  FACTCHECK_DISCLAIMER,
+  LANGS,
   artRef,
   type Lang,
 } from '../i18n/i18n';
@@ -87,8 +93,15 @@ function topByArticle(hits: SearchHit[], n: number): SearchHit[] {
 }
 
 /** Человеческий ответ LLM + обязательные ссылки на статьи-источники. */
-export function renderAnswer(text: string, hits: SearchHit[], lang: Lang = 'ru'): string {
-  const lines: string[] = [esc(text), '', SEARCH_UI.sourcesHeader[lang]];
+export function renderAnswer(
+  text: string,
+  hits: SearchHit[],
+  lang: Lang = 'ru',
+  verifiedPct = false,
+): string {
+  const lines: string[] = [esc(text), ''];
+  if (verifiedPct) lines.push(VERIFIED_BADGE[lang], '');
+  lines.push(SEARCH_UI.sourcesHeader[lang]);
   for (const h of hits) {
     lines.push(`• <a href="${chunkUrl(h.chunk)}">${esc(artRef(h.chunk.article, lang))}. ${esc(h.chunk.title)}</a>`);
   }
@@ -96,6 +109,19 @@ export function renderAnswer(text: string, hits: SearchHit[], lang: Lang = 'ru')
   lines.push(SEARCH_UI.answerDisclaimer[lang]);
   return lines.join('\n');
 }
+
+/** Вердикт фактчекера: проверка чужого текста + обязательные ссылки на статьи. */
+export function renderFactCheck(text: string, hits: SearchHit[], lang: Lang = 'ru'): string {
+  const lines: string[] = [FACTCHECK_TITLE[lang], '', esc(text), '', SEARCH_UI.sourcesHeader[lang]];
+  for (const h of hits) {
+    lines.push(`• <a href="${chunkUrl(h.chunk)}">${esc(artRef(h.chunk.article, lang))}. ${esc(h.chunk.title)}</a>`);
+  }
+  lines.push('', FACTCHECK_DISCLAIMER[lang]);
+  return lines.join('\n');
+}
+
+/** Тексты-приглашения фактчекера на всех языках — маркер для reply_to. */
+const FACTCHECK_PROMPTS = new Set(LANGS.map((l) => FACTCHECK_PROMPT[l]));
 
 /** Ответ свежий, если моложе 7 дней. */
 const CACHE_FRESH_MS = 7 * 24 * 3600 * 1000;
@@ -191,7 +217,7 @@ export function registerSearch(
         });
         telemetry?.track(uid, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
         if (out.kind === 'answered') {
-          reply = renderAnswer(out.text, sourceHits, lang);
+          reply = renderAnswer(out.text, sourceHits, lang, out.verifiedPct);
           if (qkey && cache) await cache.set(qkey, reply);
           if (cache && uid !== undefined) await cache.bumpToday(uid);
         } else if (cached && out.kind === 'error') {
@@ -207,15 +233,63 @@ export function registerSearch(
     });
   };
 
+  /** Фактчекер: сверить вставленный ответ ИИ с текстом кодекса (grounded). */
+  const factCheck = async (ctx: Context, pasted: string, uid: number | undefined, lang: Lang): Promise<void> => {
+    await ctx.replyWithChatAction('typing').catch(() => {});
+    // BM25 по вставленному тексту (бесплатно, без эмбеддинга длинного текста).
+    const hits = index.search(pasted, 8, { dedupeByArticle: false });
+    const confident = hits.length > 0 && hits[0]!.score >= MIN_TOP_SCORE;
+    if (!confident || !llm) {
+      telemetry?.track(uid, 'answer', 'factcheck_nocode');
+      await ctx.reply(FACTCHECK_NOCODE[lang], {
+        reply_markup: refusalKeyboard(lang),
+        link_preview_options: { is_disabled: true },
+      });
+      return;
+    }
+    const sourceHits = topByArticle(hits, 5);
+    const out = await generateAnswer(pasted, hits, {
+      ...llm,
+      lang,
+      mode: 'factcheck',
+      timeoutMs: llm.timeoutMs ?? 9_000,
+    });
+    telemetry?.track(uid, 'answer', out.kind === 'answered' ? 'factcheck_ok' : `factcheck_${out.kind}`);
+    if (out.kind === 'answered') {
+      await ctx.reply(renderFactCheck(out.text, sourceHits, lang), {
+        parse_mode: 'HTML',
+        link_preview_options: { is_disabled: true },
+      });
+    } else {
+      // NO_ANSWER / ошибка / 429 → честно не беремся судить.
+      await ctx.reply(FACTCHECK_NOCODE[lang], {
+        reply_markup: refusalKeyboard(lang),
+        link_preview_options: { is_disabled: true },
+      });
+    }
+  };
+
+  // Команда фактчекера: просим вставить ответ ИИ ответом на это сообщение.
+  bot.command('proverit', async (ctx) => {
+    const lang: Lang =
+      (prefs && ctx.from?.id !== undefined ? await prefs.getLang(ctx.from.id) : undefined) ?? 'ru';
+    telemetry?.track(ctx.from?.id, 'intent', 'factcheck');
+    await ctx.reply(FACTCHECK_PROMPT[lang], { reply_markup: { force_reply: true } });
+  });
+
   // Сам текст вопроса НЕ логируем (приватность) — только метрики качества.
   bot.on('message:text', async (ctx) => {
     if (ctx.message.text.startsWith('/')) return;
-    const query = ctx.message.text;
     const uid = ctx.from?.id;
-    // Язык: сохранённый выбор (/til) важнее, иначе — по буквам вопроса.
     const lang: Lang =
-      (prefs && uid !== undefined ? await prefs.getLang(uid) : undefined) ?? detectLang(query);
-    await answerQuestion(ctx, query, uid, lang);
+      (prefs && uid !== undefined ? await prefs.getLang(uid) : undefined) ?? detectLang(ctx.message.text);
+    // Ответ на приглашение фактчекера → это вставленный текст ИИ, не вопрос.
+    const replyTo = ctx.message.reply_to_message?.text;
+    if (replyTo && FACTCHECK_PROMPTS.has(replyTo)) {
+      await factCheck(ctx, ctx.message.text, uid, lang);
+      return;
+    }
+    await answerQuestion(ctx, ctx.message.text, uid, lang);
   });
 
   // Кнопка-пример под отказом: прогоняем готовый вопрос через тот же путь.

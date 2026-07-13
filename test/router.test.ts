@@ -37,6 +37,13 @@ describe('роутер намерений (инцидент «да» и чело
     expect(routeIntent('какой режим мне подходит')?.kind).toBe('wizard');
   });
 
+  it('запуск фактчекера по фразе, но не по «проверь лимит»', () => {
+    expect(routeIntent('проверь ответ')?.kind).toBe('factcheck');
+    expect(routeIntent('проверить ответ chatgpt')?.kind).toBe('factcheck');
+    expect(routeIntent('проверь ответ гпт')?.kind).toBe('factcheck');
+    expect(routeIntent('проверь лимит самозанятого')?.kind).not.toBe('factcheck');
+  });
+
   it('настоящие вопросы НЕ перехватывает (идут в поиск)', () => {
     expect(routeIntent('какой лимит дохода у самозанятого?')).toBeNull();
     expect(routeIntent('когда вставать на учёт по НДС')).toBeNull();
