@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Deka — налоги ИП и самозанятых в Казахстане по НК-2026 · Форма 910</title>
-<meta name="description" content="Бесплатный помощник по Налоговому кодексу РК-2026 для ИП и самозанятых: подбор режима, форма 910 (сдать до 15 августа), калькулятор налога 4%, ответы по статьям кодекса и напоминания. Telegram-бот на русском и казахском.">
-<meta name="theme-color" content="#0b5560">
+<meta name="description" content="Бесплатный помощник по Налоговому кодексу РК-2026 для ИП и самозанятых: подбор режима, форма 910 (сдать до 15 августа), калькулятор налога 4%, ответы по статьям кодекса и напоминания. Telegram-бот на русском, казахском и английском.">
+<meta name="theme-color" content="#0b3540">
 <meta name="keywords" content="форма 910 2026, налоги ИП Казахстан 2026, самозанятый лимит, упрощёнка 4%, налоговый режим, НК РК 2026, e-Salyq">
 <link rel="canonical" href="https://deka-3st.pages.dev/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Deka">
 <meta property="og:title" content="Deka — налоги ИП и самозанятых РК по кодексу 2026">
-<meta property="og:description" content="Подбор налогового режима, форма 910 до 15 августа, калькулятор налога, ответы по статьям кодекса. Бесплатно, на русском и казахском.">
+<meta property="og:description" content="Подбор налогового режима, форма 910 до 15 августа, калькулятор налога, ответы по статьям кодекса. Бесплатно, на трёх языках.">
 <meta property="og:url" content="https://deka-3st.pages.dev/">
 <meta property="og:image" content="https://deka-3st.pages.dev/og.svg">
 <meta name="twitter:card" content="summary_large_image">
@@ -19,139 +19,323 @@
 <meta name="twitter:description" content="Форма 910 до 15 августа, подбор режима, калькулятор налога. Бесплатно.">
 <meta name="twitter:image" content="https://deka-3st.pages.dev/og.svg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b5560'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'%3ED%3C/text%3E%3C/svg%3E">
+<script>document.documentElement.classList.add('js')</script>
 <style>
   :root{
-    --ink:#14212b; --muted:#5b6b78; --line:#dbe4ea; --bg:#f4f7f9; --card:#ffffff;
-    --accent:#0b7d8c; --accent-dark:#085e6b; --accent-soft:#e3f0f2;
-    --ok:#0d7a3f; --warn:#9a6b0a; --bad:#a33;
+    --bg:#f5f8fa; --bg2:#eef3f6; --card:#ffffff; --ink:#10222e; --muted:#5a6b77;
+    --line:#dee7ed; --accent:#0d7e8f; --accent-deep:#0a5a66; --soft:#e4f1f3;
+    --amber-bg:#fff6e2; --amber-line:#efd9a6; --amber-ink:#8a5f06;
+    --tg:#2aabee; --tg-dark:#1d9ade; --ok:#0d7a3f;
+    --shadow:0 1px 3px rgba(15,40,50,.06),0 8px 24px rgba(15,40,50,.06);
+    --shadow-lg:0 4px 12px rgba(10,30,40,.10),0 24px 60px rgba(10,30,40,.14);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b1318; --bg2:#0e1a21; --card:#121f27; --ink:#e6edf1; --muted:#94a5af;
+      --line:#22323b; --accent:#3ab6c7; --accent-deep:#8fd9e2; --soft:#12333a;
+      --amber-bg:#2a2113; --amber-line:#4a3a19; --amber-ink:#e8bb62;
+      --ok:#4ecb84;
+      --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+      --shadow-lg:0 4px 14px rgba(0,0,0,.5),0 24px 60px rgba(0,0,0,.45);
+    }
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;font-size:16px}
-  .wrap{max-width:760px;margin:0 auto;padding:0 18px}
-  a{color:var(--accent-dark)}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1020px;margin:0 auto;padding:0 20px}
+  a{color:var(--accent-deep)}
+  h2{font-size:clamp(24px,3.6vw,32px);line-height:1.2;margin:0 0 8px;letter-spacing:-.01em}
+  .h2sub{color:var(--muted);margin:0 0 26px;font-size:16.5px;max-width:62ch}
+  section{padding:64px 0}
+  .alt{background:var(--bg2)}
 
-  header.hero{background:linear-gradient(180deg,#0b3540,#0b5560);color:#fff;padding:52px 0 44px}
-  .hero .wrap{max-width:760px}
-  .logo{font-weight:800;font-size:15px;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
-  h1{font-size:clamp(26px,5.5vw,38px);line-height:1.15;margin:14px 0 12px;text-wrap:balance}
-  .sub{font-size:17px;opacity:.92;max-width:56ch;margin:0 0 24px}
-  .cta-row{display:flex;gap:12px;flex-wrap:wrap}
-  .btn{display:inline-block;border:none;border-radius:10px;padding:13px 22px;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none;text-align:center}
-  .btn-tg{background:#2aabee;color:#fff}
-  .btn-tg:hover{background:#1d9ade}
-  .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35)}
-  .btn-ghost:hover{background:rgba(255,255,255,.2)}
+  /* ── Шапка ── */
+  .top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .top .wrap{display:flex;align-items:center;gap:14px;height:58px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:.02em;color:var(--ink);text-decoration:none}
+  .brand .dot{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0d7e8f,#0a4a56);color:#fff;display:grid;place-items:center;font-size:15px;font-weight:800}
+  .top .spacer{flex:1}
+  .langs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:3px}
+  .langs button{border:none;background:transparent;color:var(--muted);font-size:12.5px;font-weight:700;padding:5px 9px;border-radius:6px;cursor:pointer;letter-spacing:.03em}
+  .langs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  .top .btn{padding:8px 15px;font-size:14px}
 
-  main{padding:34px 0 10px}
-  h2{font-size:24px;margin:38px 0 6px}
-  .h2sub{color:var(--muted);margin:0 0 18px}
+  /* ── Кнопки ── */
+  .btn{display:inline-block;border:none;border-radius:11px;padding:14px 24px;font-size:16px;font-weight:650;cursor:pointer;text-decoration:none;text-align:center;transition:transform .12s ease,background .15s ease,box-shadow .15s ease}
+  .btn:active{transform:scale(.98)}
+  .btn-tg{background:var(--tg);color:#fff;box-shadow:0 4px 14px rgba(42,171,238,.35)}
+  .btn-tg:hover{background:var(--tg-dark)}
+  .btn-ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.35)}
+  .btn-ghost:hover{background:rgba(255,255,255,.18)}
 
-  #calc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;box-shadow:0 1px 3px rgba(15,40,50,.05)}
-  .step-label{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-dark);font-weight:700;margin:0 0 8px}
+  /* ── Hero ── */
+  .hero{background:linear-gradient(140deg,#082832 0%,#0b4552 52%,#0d5f6e 100%);color:#fff;padding:72px 0 76px;overflow:hidden;position:relative}
+  .hero::after{content:"";position:absolute;inset:auto -20% -60% -20%;height:70%;background:radial-gradient(ellipse at center,rgba(58,182,199,.22),transparent 65%);pointer-events:none}
+  .hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center;position:relative}
+  .hero h1{font-size:clamp(29px,4.6vw,46px);line-height:1.12;margin:0 0 16px;letter-spacing:-.015em;text-wrap:balance}
+  .hero .sub{font-size:17.5px;opacity:.92;max-width:58ch;margin:0 0 26px;line-height:1.6}
+  .cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chips span{font-size:13px;font-weight:600;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:6px 12px}
+
+  /* ── Телефон-мокап ── */
+  .phone{width:min(320px,100%);margin:0 auto;background:#0e1621;border:1px solid rgba(255,255,255,.14);border-radius:30px;padding:14px;box-shadow:var(--shadow-lg);transform:rotate(-1.2deg)}
+  .phone-top{display:flex;align-items:center;gap:10px;padding:4px 6px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .phone-top .ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#0d7e8f,#0a4a56);display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px}
+  .phone-top b{display:block;color:#eef4f8;font-size:14.5px;line-height:1.2}
+  .phone-top span{display:block;color:#7c93a3;font-size:11.5px}
+  .chat{display:flex;flex-direction:column;gap:8px;padding:14px 2px 4px}
+  .msg{max-width:88%;border-radius:14px;padding:9px 12px;font-size:13.5px;line-height:1.45;color:#e7eef4}
+  .msg.user{align-self:flex-end;background:#2b5278;border-bottom-right-radius:4px}
+  .msg.bot{align-self:flex-start;background:#182533;border-bottom-left-radius:4px}
+  .msg .src{display:inline-block;margin-top:7px;font-size:11.5px;color:#69d3e2;background:rgba(58,182,199,.12);border:1px solid rgba(58,182,199,.3);border-radius:7px;padding:2px 8px}
+
+  /* ── Баннер 910 ── */
+  .banner{background:var(--amber-bg);border-bottom:1px solid var(--amber-line)}
+  .banner .wrap{padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .banner .cd{font-weight:800;font-size:14.5px;color:var(--amber-ink);background:var(--card);border:1px solid var(--amber-line);border-radius:9px;padding:5px 12px;white-space:nowrap}
+  .banner .txt{font-size:14.5px}
+  .banner b{color:var(--ink)}
+
+  /* ── Цифры ── */
+  .stats{padding:50px 0}
+  .stats h2{text-align:center;margin-bottom:30px}
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 18px;text-align:center;box-shadow:var(--shadow)}
+  .stat .n{font-size:clamp(28px,3.4vw,38px);font-weight:800;letter-spacing:-.02em;background:linear-gradient(120deg,var(--accent),var(--accent-deep));-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1}
+  .stat .l{color:var(--muted);font-size:13.5px;margin-top:6px;line-height:1.4}
+
+  /* ── Как работает ── */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:step}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow);position:relative}
+  .step::before{counter-increment:step;content:counter(step);position:absolute;top:-14px;left:20px;width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;font-weight:800;display:grid;place-items:center;font-size:15px;box-shadow:0 3px 8px rgba(13,126,143,.4)}
+  @media (prefers-color-scheme: dark){.step::before{color:#062e34}}
+  .step b{display:block;font-size:16.5px;margin:8px 0 8px}
+  .step p{margin:0;color:var(--muted);font-size:14.5px}
+
+  /* ── Калькулятор ── */
+  #calc{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:var(--shadow)}
+  .calc-note{display:none;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13.5px;color:var(--muted);margin:0 0 14px}
+  .calc-note.show{display:block}
+  .step-label{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-deep);font-weight:700;margin:0 0 8px}
   .question{font-size:19px;font-weight:650;margin:0 0 6px}
   .hint{color:var(--muted);font-size:14.5px;margin:0 0 14px}
   .options{display:flex;flex-direction:column;gap:10px;margin-top:14px}
-  .opt{background:var(--accent-soft);border:1.5px solid transparent;border-radius:10px;padding:13px 16px;font-size:16px;text-align:left;cursor:pointer;color:var(--ink)}
+  .opt{background:var(--soft);border:1.5px solid transparent;border-radius:11px;padding:14px 16px;font-size:16px;text-align:left;cursor:pointer;color:var(--ink);transition:border-color .12s ease,transform .12s ease}
   .opt:hover{border-color:var(--accent)}
+  .opt:active{transform:scale(.99)}
   .linkout{display:inline-block;margin-top:12px;font-size:14.5px}
   .restart{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;margin-top:16px;padding:0;text-decoration:underline}
-
   .headline{font-size:20px;font-weight:700;margin:0 0 14px}
-  .regime{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0}
+  .regime{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0}
   .regime b{display:block;margin-bottom:4px}
   .regime ul{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:14.5px}
   .regime ul li{margin:3px 0}
-  .st-recommended{border-color:var(--ok);background:#f2faf5}
-  .st-needs_check{border-color:var(--warn);background:#fbf7ec}
-  .st-not_eligible{opacity:.75}
-  .flags{background:#fbf7ec;border:1px solid #ecd9a8;border-radius:10px;padding:12px 16px;margin:14px 0;font-size:14.5px}
+  .st-recommended{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,var(--card))}
+  .st-needs_check{border-color:var(--amber-line);background:color-mix(in srgb,var(--amber-ink) 7%,var(--card))}
+  .st-not_eligible{opacity:.72}
+  .flags{background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:11px;padding:12px 16px;margin:14px 0;font-size:14.5px}
   .flags p{margin:4px 0}
   .sources{font-size:14px;color:var(--muted);margin-top:16px}
   .sources a{display:block;margin:3px 0}
   .disclaimer{font-size:13px;color:var(--muted);font-style:italic;margin-top:14px}
-  .to-bot{background:var(--accent-soft);border-radius:10px;padding:14px 16px;margin-top:18px;font-size:15px}
+  .to-bot{background:var(--soft);border-radius:11px;padding:14px 16px;margin-top:18px;font-size:15px}
 
-  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
-  .feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
-  .feat b{display:block;margin-bottom:6px}
+  /* ── Форма 910 ── */
+  .s910{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 28px;box-shadow:var(--shadow)}
+  .s910 h2{margin-top:0}
+  .s910 table{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:15px}
+  .s910 td{padding:10px;border-top:1px solid var(--line);vertical-align:top}
+  .s910 td:first-child{color:var(--muted);white-space:nowrap;width:32%}
+  .s910 p{margin:0}
+
+  /* ── Возможности ── */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);transition:transform .15s ease,box-shadow .15s ease}
+  .feat:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+  .feat b{display:block;margin-bottom:7px;font-size:16px}
   .feat p{margin:0;color:var(--muted);font-size:14.5px}
 
-  footer{padding:30px 0 44px;color:var(--muted);font-size:13.5px}
-  footer .wrap{border-top:1px solid var(--line);padding-top:22px}
+  /* ── FAQ ── */
+  .faq{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:8px 26px;box-shadow:var(--shadow)}
+  .faq details{border-top:1px solid var(--line);padding:15px 0}
+  .faq details:first-child{border-top:none}
+  .faq summary{cursor:pointer;font-weight:650;font-size:15.5px;list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:center}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";font-size:20px;color:var(--accent);font-weight:400;transition:transform .15s ease}
+  .faq details[open] summary::after{transform:rotate(45deg)}
+  .faq p{margin:10px 0 2px;color:var(--muted);font-size:14.5px}
 
-  .banner{background:#fff4e0;border-bottom:1px solid #f0d9a8}
-  .banner .wrap{padding:13px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .banner .cd{font-weight:800;font-size:15px;color:#9a6b0a;background:#fff;border:1px solid #f0d9a8;border-radius:8px;padding:4px 10px;white-space:nowrap}
-  .banner span.txt{font-size:14.5px}
-  .banner b{color:var(--ink)}
-  .s910{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:26px 0}
-  .s910 h2{margin-top:0}
-  .s910 table{width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:15px}
-  .s910 td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:top}
-  .s910 td:first-child{color:var(--muted);white-space:nowrap;width:36%}
-  .faq details{border-top:1px solid var(--line);padding:12px 0}
-  .faq summary{cursor:pointer;font-weight:600}
-  .faq p{margin:8px 0 0;color:var(--muted)}
+  /* ── Финальный CTA ── */
+  .cta-final{background:linear-gradient(140deg,#082832,#0d5f6e);border-radius:22px;color:#fff;text-align:center;padding:52px 30px;box-shadow:var(--shadow-lg)}
+  .cta-final h2{color:#fff}
+  .cta-final p{opacity:.9;margin:0 0 26px;font-size:16.5px}
+
+  footer{padding:36px 0 46px;color:var(--muted);font-size:13.5px}
+  footer .wrap{border-top:1px solid var(--line);padding-top:24px}
+  footer p{margin:6px 0}
+
+  /* ── Появление при скролле (только при работающем JS — иначе всё видно) ── */
+  @media (prefers-reduced-motion: no-preference){
+    html.js .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+    html.js .reveal.in{opacity:1;transform:none}
+  }
+
+  /* ── Мобильный ── */
+  @media (max-width: 860px){
+    section{padding:46px 0}
+    .hero{padding:46px 0 54px}
+    .hero .wrap{grid-template-columns:1fr;gap:36px}
+    .phone{transform:none}
+    .statgrid{grid-template-columns:repeat(2,1fr)}
+    .steps,.grid3{grid-template-columns:1fr}
+    .step{margin-top:8px}
+    .top .btn{display:none}
+  }
 </style>
 </head>
 <body>
 
-<header class="hero">
+<header class="top">
   <div class="wrap">
-    <div class="logo">Deka</div>
-    <h1>Налоги для ИП и самозанятых Казахстана — по новому кодексу 2026, без паники</h1>
-    <p class="sub">Новый Налоговый кодекс действует с 1 января 2026. Deka за 4 вопроса подскажет твой режим — самозанятый, упрощёнка или общий — со ссылками на конкретные статьи кодекса.</p>
-    <div class="cta-row">
-      <a class="btn btn-tg" href="https://t.me/deka_tax_bot" target="_blank" rel="noopener">Открыть бота в Telegram</a>
-      <a class="btn btn-ghost" href="#calculator">Посчитать прямо здесь ↓</a>
+    <a class="brand" href="#"><span class="dot">D</span>Deka</a>
+    <span class="spacer"></span>
+    <div class="langs" id="langs" role="group" aria-label="Language">
+      <button data-lang="ru">RU</button><button data-lang="kk">ҚАЗ</button><button data-lang="en">EN</button>
     </div>
+    <a class="btn btn-tg" data-i18n="nav.open" href="https://t.me/deka_tax_bot?start=site" target="_blank" rel="noopener">Открыть бота</a>
   </div>
 </header>
 
-<section class="banner"><div class="wrap">
-  <span class="cd" id="cd910">Форма 910</span>
-  <span class="txt"><b>Форма 910</b> за 1-е полугодие — сдать до 15 августа, уплатить до 25 августа 2026. <a href="#f910">Что делать →</a></span>
-</div></section>
-
-<main>
+<section class="hero">
   <div class="wrap">
-    <h2 id="calculator">Какой налоговый режим мне подходит?</h2>
-    <p class="h2sub">Тот же алгоритм, что в боте: детерминированная логика по лимитам из кодекса, никакого ИИ-гадания.</p>
-    <div id="calc"><noscript>Для калькулятора нужен JavaScript — или просто открой бота: t.me/deka_tax_bot</noscript></div>
-
-    <section class="s910" id="f910">
-      <h2>Форма 910 за 1-е полугодие 2026 — что нужно знать</h2>
-      <table>
-        <tr><td>Кто сдаёт</td><td>ИП и ТОО на упрощёнке (СНР на основе упрощённой декларации).</td></tr>
-        <tr><td>Срок сдачи</td><td><b>до 15 августа 2026</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11967" target="_blank" rel="noopener">Ст. 727</a>).</td></tr>
-        <tr><td>Срок уплаты</td><td><b>до 25 августа 2026</b>.</td></tr>
-        <tr><td>Ставка</td><td>Упрощёнка — <b>4% от оборота</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11961" target="_blank" rel="noopener">Ст. 726</a>). Самозанятый — ИПН <b>0%</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11830" target="_blank" rel="noopener">Ст. 720</a>), только соцплатежи.</td></tr>
-        <tr><td>Где сдать</td><td>Приложение e-Salyq Business или кабинет налогоплательщика; оплата — Kaspi/банк.</td></tr>
-      </table>
-      <p>Deka посчитает твой налог: запиши доход в боте — покажет 4% и близость к лимитам. <a href="https://t.me/deka_tax_bot?start=site910" target="_blank" rel="noopener">Открыть в Telegram →</a></p>
-    </section>
-
-    <h2>Частые вопросы</h2>
-    <div class="faq">
-      <details><summary>Когда крайний срок формы 910 за 1-е полугодие 2026?</summary><p>Сдать декларацию — до 15 августа, уплатить налог — до 25 августа 2026 (Ст. 727 НК РК-2026). Если день выпадает на выходной, срок переносится на ближайший рабочий день.</p></details>
-      <details><summary>Какая ставка налога на упрощёнке в 2026 году?</summary><p>4% от оборота (Ст. 726 НК РК-2026). Местный акимат вправе изменить ставку в пределах ±50%.</p></details>
-      <details><summary>Сколько платит самозанятый?</summary><p>ИПН — 0% (Ст. 720). Платятся только социальные платежи, которые рассчитывает приложение e-Salyq.</p></details>
-      <details><summary>Какой лимит дохода у самозанятого?</summary><p>300 МРП в месяц — 1 297 500 ₸ в 2026 году. Выше лимита — упрощёнка или общий режим. Проверить свой случай можно калькулятором выше или в боте.</p></details>
+    <div>
+      <h1 data-i18n="hero.h1">Налоговый помощник, который отвечает статьями кодекса — а не догадками</h1>
+      <p class="sub" data-i18n="hero.sub">Deka помогает ИП и самозанятым Казахстана разобраться в новом Налоговом кодексе-2026: подбор режима, форма 910, лимиты и ответы на вопросы — каждый ответ с цитатой и ссылкой на статью. Бесплатно, в Telegram.</p>
+      <div class="cta-row">
+        <a class="btn btn-tg" data-i18n="hero.cta1" href="https://t.me/deka_tax_bot?start=site" target="_blank" rel="noopener">Открыть бота в Telegram</a>
+        <a class="btn btn-ghost" data-i18n="hero.cta2" href="#calculator">Посчитать режим здесь ↓</a>
+      </div>
+      <div class="chips">
+        <span data-i18n="chip.1">📖 Цитаты из первоисточника</span>
+        <span data-i18n="chip.2">🆓 Бесплатно навсегда</span>
+        <span data-i18n="chip.3">🌐 Русский · Қазақша · English</span>
+        <span data-i18n="chip.4">🔓 Открытый код</span>
+      </div>
     </div>
-
-    <h2>Почему Deka можно верить</h2>
-    <div class="grid3">
-      <div class="feat"><b>Цифры — из закона, не из пересказов</b><p>Все лимиты считаются от МРП 2026 (4 325 ₸) по статьям НК РК-2026. Ссылки ведут на adilet.zan.kz — официальный текст кодекса.</p></div>
-      <div class="feat"><b>Честный отказ вместо выдумки</b><p>Там, где данных не хватает (например, разрешительный список), Deka говорит «нужно проверить», а не угадывает.</p></div>
-      <div class="feat"><b>Напоминания в Telegram</b><p>Бот напомнит о дедлайнах (форма 910 — до 15 августа) и предупредит, когда оборот подойдёт к лимиту. Бесплатно.</p></div>
+    <div class="phone" aria-hidden="true">
+      <div class="phone-top">
+        <div class="ava">D</div>
+        <div><b>Deka</b><span data-i18n="demo.status">бот · отвечает по НК РК-2026</span></div>
+      </div>
+      <div class="chat">
+        <div class="msg user" data-i18n="demo.u1">Какой лимит дохода у самозанятого?</div>
+        <div class="msg bot"><span data-i18n-html="demo.b1">Лимит — <b>300 МРП в месяц</b>, в 2026 году это <b>1 297 500 ₸</b>. Выше лимита — упрощёнка или общий режим.</span><br><span class="src" data-i18n="demo.src1">📖 Ст. 718 п. 6 НК РК-2026</span></div>
+        <div class="msg user" data-i18n="demo.u2">А если не найдёшь ответ?</div>
+        <div class="msg bot" data-i18n="demo.b2">Честно скажу «не нашёл» и подскажу, где проверить. Никаких выдуманных цифр.</div>
+      </div>
     </div>
   </div>
-</main>
+</section>
+
+<div class="banner"><div class="wrap">
+  <span class="cd" id="cd910">Форма 910</span>
+  <span class="txt"><span data-i18n-html="banner.txt"><b>Форма 910</b> за 1-е полугодие — сдать до 15 августа, уплатить до 25 августа 2026.</span> <a href="#f910" data-i18n="banner.link">Что делать →</a></span>
+</div></div>
+
+<section class="stats">
+  <div class="wrap">
+    <h2 class="reveal" data-i18n="stats.title">Инженерная честность, а не обещания</h2>
+    <div class="statgrid">
+      <div class="stat reveal"><div class="n">94%</div><div class="l" data-i18n="stats.1l">точность поиска по кодексу (hit@3)</div></div>
+      <div class="stat reveal"><div class="n">998</div><div class="l" data-i18n="stats.2l">фрагментов кодекса в базе</div></div>
+      <div class="stat reveal"><div class="n">86</div><div class="l" data-i18n="stats.3l">автотестов на каждый релиз</div></div>
+      <div class="stat reveal"><div class="n">24/7</div><div class="l" data-i18n="stats.4l">работает в облаке</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="how">
+  <div class="wrap">
+    <h2 class="reveal" data-i18n="how.title">Как Deka отвечает</h2>
+    <p class="h2sub"></p>
+    <div class="steps">
+      <div class="step reveal"><b data-i18n="how.s1t">Ты спрашиваешь по-человечески</b><p data-i18n="how.s1p">«Какая ставка у упрощёнки?», «когда сдавать 910?» — без юридического языка и слэш-команд.</p></div>
+      <div class="step reveal"><b data-i18n="how.s2t">Deka ищет по тексту закона</b><p data-i18n="how.s2p">Не по пересказам из интернета, а по официальному тексту НК РК-2026 (998 фрагментов с adilet.zan.kz).</p></div>
+      <div class="step reveal"><b data-i18n="how.s3t">Ответ с цитатой — или честное «не нашёл»</b><p data-i18n="how.s3p">Каждый ответ ссылается на статью. Если уверенного ответа нет — Deka не выдумывает, а говорит прямо.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="calculator">
+  <div class="wrap">
+    <h2 class="reveal" data-i18n="calc.title">Какой налоговый режим мне подходит?</h2>
+    <p class="h2sub" data-i18n="calc.sub">Тот же алгоритм, что в боте: детерминированная логика по лимитам из кодекса, никакого ИИ-гадания.</p>
+    <div class="calc-note" id="calcNote"></div>
+    <div id="calc"><noscript>Для калькулятора нужен JavaScript — или просто открой бота: t.me/deka_tax_bot</noscript></div>
+  </div>
+</section>
+
+<section class="alt" id="f910-s">
+  <div class="wrap">
+    <div class="s910 reveal" id="f910">
+      <h2 data-i18n="f910.title">Форма 910 за 1-е полугодие 2026 — что нужно знать</h2>
+      <table>
+        <tr><td data-i18n="f910.r1l">Кто сдаёт</td><td data-i18n-html="f910.r1v">ИП и ТОО на упрощёнке (СНР на основе упрощённой декларации).</td></tr>
+        <tr><td data-i18n="f910.r2l">Срок сдачи</td><td data-i18n-html="f910.r2v"><b>до 15 августа 2026</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11967" target="_blank" rel="noopener">Ст. 727</a>).</td></tr>
+        <tr><td data-i18n="f910.r3l">Срок уплаты</td><td data-i18n-html="f910.r3v"><b>до 25 августа 2026</b>.</td></tr>
+        <tr><td data-i18n="f910.r4l">Ставка</td><td data-i18n-html="f910.r4v">Упрощёнка — <b>4% от оборота</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11961" target="_blank" rel="noopener">Ст. 726</a>). Самозанятый — ИПН <b>0%</b> (<a href="https://adilet.zan.kz/rus/docs/K2500000214#z11830" target="_blank" rel="noopener">Ст. 720</a>), только соцплатежи.</td></tr>
+        <tr><td data-i18n="f910.r5l">Где сдать</td><td data-i18n-html="f910.r5v">Приложение e-Salyq Business или кабинет налогоплательщика; оплата — Kaspi/банк.</td></tr>
+      </table>
+      <p data-i18n-html="f910.cta">Deka посчитает твой налог: запиши доход в боте — покажет 4% и близость к лимитам. <a href="https://t.me/deka_tax_bot?start=site910" target="_blank" rel="noopener">Открыть в Telegram →</a></p>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2 class="reveal" data-i18n="feat.title">Что умеет бот</h2>
+    <p class="h2sub"></p>
+    <div class="grid3">
+      <div class="feat reveal"><b data-i18n="feat.1t">💬 Ответы с цитатами</b><p data-i18n="feat.1p">Любой вопрос по налогам — ответ по тексту НК РК-2026 со ссылкой на статью. Бесплатно навсегда.</p></div>
+      <div class="feat reveal"><b data-i18n="feat.2t">🧮 Подбор режима</b><p data-i18n="feat.2p">Самозанятый, упрощёнка или общий — за 3–4 вопроса, с объяснением почему.</p></div>
+      <div class="feat reveal"><b data-i18n="feat.3t">📊 Трекер оборота</b><p data-i18n="feat.3p">Пиши «заработал 500 000» — бот предупредит до того, как ты пересечёшь лимит НДС или упрощёнки.</p></div>
+      <div class="feat reveal"><b data-i18n="feat.4t">📋 Форма 910</b><p data-i18n="feat.4p">Сроки, ставка 4%, где сдавать — и расчёт налога по твоему реальному обороту.</p></div>
+      <div class="feat reveal"><b data-i18n="feat.5t">📅 Напоминания</b><p data-i18n="feat.5p">За 7 и за 1 день до дедлайна + ежемесячная сводка оборота. Отключается одной кнопкой.</p></div>
+      <div class="feat reveal"><b data-i18n="feat.6t">🔒 Приватность</b><p data-i18n="feat.6p">Вопросы не сохраняются, суммы — анонимно. Команда /privacy удаляет все твои данные.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="faq">
+  <div class="wrap">
+    <h2 class="reveal" data-i18n="faq.title">Частые вопросы</h2>
+    <p class="h2sub"></p>
+    <div class="faq reveal">
+      <details><summary data-i18n="faq.q1">Когда крайний срок формы 910 за 1-е полугодие 2026?</summary><p data-i18n="faq.a1">Сдать декларацию — до 15 августа, уплатить налог — до 25 августа 2026 (Ст. 727 НК РК-2026). Если день выпадает на выходной, срок переносится на ближайший рабочий день.</p></details>
+      <details><summary data-i18n="faq.q2">Какая ставка налога на упрощёнке в 2026 году?</summary><p data-i18n="faq.a2">4% от оборота (Ст. 726 НК РК-2026). Местный акимат вправе изменить ставку в пределах ±50%.</p></details>
+      <details><summary data-i18n="faq.q3">Сколько платит самозанятый?</summary><p data-i18n="faq.a3">ИПН — 0% (Ст. 720). Платятся только социальные платежи, которые рассчитывает приложение e-Salyq.</p></details>
+      <details><summary data-i18n="faq.q4">Какой лимит дохода у самозанятого?</summary><p data-i18n="faq.a4">300 МРП в месяц — 1 297 500 ₸ в 2026 году. Выше лимита — упрощёнка или общий режим. Проверить свой случай можно калькулятором выше или в боте.</p></details>
+      <details><summary data-i18n="faq.q5">Это бесплатно? В чём подвох?</summary><p data-i18n="faq.a5">Ответы по кодексу бесплатны и останутся бесплатными — это принцип проекта. Позже могут появиться платные удобства (выгрузки, персональные напоминания), но базовая помощь — нет.</p></details>
+      <details><summary data-i18n="faq.q6">Deka — это официальный сервис налоговой?</summary><p data-i18n="faq.a6">Нет. Deka — независимый помощник-ориентир, не связан с КГД. Он показывает, что написано в законе, и даёт ссылки на официальный текст. Финальные решения — по декларации и/или с бухгалтером, вопросы — КГД 1414.</p></details>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="cta-final reveal">
+      <h2 data-i18n="cta.title">Попробуй прямо сейчас — это 10 секунд</h2>
+      <p data-i18n="cta.sub">Открой бота, нажми «Старт» и задай свой вопрос — или просто напиши «заработал 500 000».</p>
+      <a class="btn btn-tg" data-i18n="cta.btn" href="https://t.me/deka_tax_bot?start=sitecta" target="_blank" rel="noopener">Открыть @deka_tax_bot</a>
+    </div>
+  </div>
+</section>
 
 <footer>
   <div class="wrap">
-    <p><b>Deka</b> — неофициальный помощник. Не связан с КГД МФ РК. Это ориентир, а не налоговая консультация: итоговые решения принимай по тексту НК РК-2026 и/или с бухгалтером.</p>
-    <p>Бот: <a href="https://t.me/deka_tax_bot">@deka_tax_bot</a> · Первоисточник: <a href="https://adilet.zan.kz/rus/docs/K2500000214" target="_blank" rel="noopener">НК РК-2026 на adilet.zan.kz</a></p>
+    <p data-i18n="foot.p1"><b>Deka</b> — неофициальный помощник. Не связан с КГД МФ РК. Это ориентир, а не налоговая консультация: итоговые решения принимай по тексту НК РК-2026 и/или с бухгалтером.</p>
+    <p>Бот: <a href="https://t.me/deka_tax_bot">@deka_tax_bot</a> · <a href="https://github.com/midat-fx/deka" target="_blank" rel="noopener">GitHub</a> · <a href="https://adilet.zan.kz/rus/docs/K2500000214" target="_blank" rel="noopener">НК РК-2026 на adilet.zan.kz</a></p>
   </div>
 </footer>
 
@@ -160,13 +344,9 @@
 {"@type":"Question","name":"Когда крайний срок формы 910 за 1-е полугодие 2026?","acceptedAnswer":{"@type":"Answer","text":"Сдать декларацию — до 15 августа, уплатить налог — до 25 августа 2026 года (Ст. 727 НК РК-2026)."}},
 {"@type":"Question","name":"Какая ставка налога на упрощёнке в 2026 году?","acceptedAnswer":{"@type":"Answer","text":"4% от оборота (Ст. 726 НК РК-2026). Местный акимат вправе изменить ставку в пределах ±50%."}},
 {"@type":"Question","name":"Сколько платит самозанятый в Казахстане?","acceptedAnswer":{"@type":"Answer","text":"ИПН — 0% (Ст. 720 НК РК-2026). Платятся только социальные платежи через приложение e-Salyq."}},
-{"@type":"Question","name":"Какой лимит дохода у самозанятого?","acceptedAnswer":{"@type":"Answer","text":"300 МРП в месяц — 1 297 500 тенге в 2026 году. Выше лимита — упрощёнка или общий режим."}}
+{"@type":"Question","name":"Какой лимит дохода у самозанятого?","acceptedAnswer":{"@type":"Answer","text":"300 МРП в месяц — 1 297 500 тенге в 2026 году. Выше лимита — упрощёнка или общий режим."}},
+{"@type":"Question","name":"Deka — это официальный сервис налоговой?","acceptedAnswer":{"@type":"Answer","text":"Нет, Deka — независимый неофициальный помощник. Он показывает, что написано в НК РК-2026, со ссылками на официальный текст на adilet.zan.kz."}}
 ]}
-</script>
-<script>
-(function(){var el=document.getElementById('cd910');if(!el)return;
-var days=Math.ceil((Date.UTC(2026,7,15)-Date.now())/86400000);
-el.textContent=days>0?'⏳ '+days+' дн.':days===0?'сегодня!':'📋 Форма 910';})();
 </script>
 <script src="./app.js"></script>
 </body>
