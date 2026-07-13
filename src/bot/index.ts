@@ -65,6 +65,8 @@ await bot.start({
       { command: 'oborot', description: 'Оборот и близость к лимитам' },
       { command: 'dedlayny', description: 'Налоговые дедлайны и напоминания' },
       { command: 'til', description: 'Тіл / язык (қазақша · русский)' },
+      { command: 'settings', description: 'Настройки: язык, напоминания, данные' },
+      { command: 'privacy', description: 'Удалить мои данные' },
       { command: 'help', description: 'Что умеет бот' },
     ]);
     console.log(`✅ Запущен как @${me.username}. Открой бота в Telegram и напиши /start.`);

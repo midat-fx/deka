@@ -12,6 +12,8 @@ import type { Lang } from '../i18n/i18n';
 export interface PrefsStore {
   getLang(telegramId: number): Promise<Lang | undefined>;
   setLang(telegramId: number, lang: Lang): Promise<void>;
+  /** Удалить настройки пользователя (для «удалить мои данные»). */
+  clear(telegramId: number): Promise<void>;
 }
 
 export const PREFS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS user_prefs (
@@ -22,6 +24,7 @@ export const PREFS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS user_prefs (
 const GET_SQL = 'SELECT lang FROM user_prefs WHERE user_hash=?';
 const SET_SQL =
   'INSERT INTO user_prefs (user_hash, lang) VALUES (?, ?) ON CONFLICT(user_hash) DO UPDATE SET lang=excluded.lang';
+const CLEAR_SQL = 'DELETE FROM user_prefs WHERE user_hash=?';
 
 export class SqlitePrefs implements PrefsStore {
   private db: DatabaseSync;
@@ -38,6 +41,9 @@ export class SqlitePrefs implements PrefsStore {
   }
   async setLang(id: number, lang: Lang): Promise<void> {
     this.db.prepare(SET_SQL).run(hashUser(this.salt, id), lang);
+  }
+  async clear(id: number): Promise<void> {
+    this.db.prepare(CLEAR_SQL).run(hashUser(this.salt, id));
   }
 }
 
@@ -68,5 +74,8 @@ export class D1Prefs implements PrefsStore {
   }
   async setLang(id: number, lang: Lang): Promise<void> {
     await this.db.prepare(SET_SQL).bind(hashUser(this.salt, id), lang).run();
+  }
+  async clear(id: number): Promise<void> {
+    await this.db.prepare(CLEAR_SQL).bind(hashUser(this.salt, id)).run();
   }
 }

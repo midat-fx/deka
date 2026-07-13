@@ -3,7 +3,7 @@
  * Кнопки — обычные слова на языке пользователя, никаких слэшей.
  * Роутинг нажатий — в router.ts (кнопка приходит обычным текстом).
  */
-import { Keyboard } from 'grammy';
+import { Keyboard, InlineKeyboard } from 'grammy';
 import { MENU, LANGS, type Lang } from '../i18n/i18n';
 
 export function mainKeyboard(lang: Lang): Keyboard {
@@ -15,11 +15,23 @@ export function mainKeyboard(lang: Lang): Keyboard {
     .text(MENU.income[lang])
     .row()
     .text(MENU.deadlines[lang])
-    .text(MENU.language[lang])
+    .text(MENU.language[lang]) // язык остаётся на виду — частая боль нетехнаря
     .row()
+    .text(MENU.settings[lang])
     .text(MENU.help[lang])
     .resized()
     .persistent();
+}
+
+/**
+ * Ряд inline-кнопок «что дальше» под успешным ответом — мягкая воронка к
+ * инструментам. Обработчик nav| — в text-router (там все зависимости).
+ */
+export function followupKeyboard(lang: Lang): InlineKeyboard {
+  return new InlineKeyboard()
+    .text(MENU.form910[lang], 'nav|910')
+    .text(MENU.turnover[lang], 'nav|oborot')
+    .text(MENU.deadlines[lang], 'nav|dedlayny');
 }
 
 export type MenuAction = keyof typeof MENU;

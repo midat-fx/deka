@@ -142,6 +142,7 @@ export const MENU = {
   income: { ru: '➕ Записать доход', kk: '➕ Табыс жазу', en: '➕ Log income' },
   deadlines: { ru: '📅 Дедлайны', kk: '📅 Мерзімдер', en: '📅 Deadlines' },
   language: { ru: '🌐 Язык / Тіл', kk: '🌐 Тіл / Язык', en: '🌐 Language' },
+  settings: { ru: '⚙️ Настройки', kk: '⚙️ Баптаулар', en: '⚙️ Settings' },
   help: { ru: '❓ Помощь', kk: '❓ Көмек', en: '❓ Help' },
 } satisfies Record<string, Record<Lang, string>>;
 
@@ -155,4 +156,95 @@ export const KGD_BUTTON: Record<Lang, string> = {
   ru: '📞 КГД: 1414 (бесплатно)',
   kk: '📞 МКК: 1414 (тегін)',
   en: '📞 Tax authority: 1414 (free)',
+};
+
+// ── Экран «⚙️ Настройки» ──────────────────────────────────────────────────
+export const SETTINGS_TITLE: Record<Lang, string> = {
+  ru: '⚙️ <b>Настройки</b>\n\nСмени язык, включи или выключи напоминания о дедлайнах, управляй своими данными.',
+  kk: '⚙️ <b>Баптаулар</b>\n\nТілді ауыстырыңыз, мерзімдер туралы еске салуларды қосып-өшіріңіз, деректеріңізді басқарыңыз.',
+  en: '⚙️ <b>Settings</b>\n\nChange the language, turn deadline reminders on or off, and manage your data.',
+};
+
+/** Кнопки экрана настроек (напоминания показывают текущее состояние). */
+export const SETTINGS_BTN = {
+  language: { ru: '🌐 Язык интерфейса', kk: '🌐 Интерфейс тілі', en: '🌐 Interface language' },
+  remindersOn: { ru: '🔔 Напоминания: включены', kk: '🔔 Еске салу: қосулы', en: '🔔 Reminders: on' },
+  remindersOff: { ru: '🔕 Напоминания: выключены', kk: '🔕 Еске салу: өшулі', en: '🔕 Reminders: off' },
+  pro: { ru: '💎 Deka Pro — ранний доступ', kk: '💎 Deka Pro — ерте қол жеткізу', en: '💎 Deka Pro — early access' },
+  wipe: { ru: '🗑️ Удалить мои данные', kk: '🗑️ Деректерімді жою', en: '🗑️ Delete my data' },
+} satisfies Record<string, Record<Lang, string>>;
+
+export const REM_TOGGLED: Record<Lang, (on: boolean) => string> = {
+  ru: (on) => (on ? '🔔 Напоминания включены' : '🔕 Напоминания выключены'),
+  kk: (on) => (on ? '🔔 Еске салу қосылды' : '🔕 Еске салу өшірілді'),
+  en: (on) => (on ? '🔔 Reminders on' : '🔕 Reminders off'),
+};
+
+// ── Deka Pro (лист ожидания — замеряем готовность платить) ─────────────────
+export const PRO_ABOUT: Record<Lang, string> = {
+  ru:
+    '💎 <b>Deka Pro</b> — для тех, кому нужно больше:\n' +
+    '• Безлимит вопросов и приоритетные ответы\n' +
+    '• Персональные напоминания под твои сроки сдачи\n' +
+    '• Выгрузка оборота и расчёта налога файлом\n\n' +
+    'Пока в разработке. Нажми «Записаться» — напишу, когда откроется ранний доступ. Это ни к чему не обязывает.',
+  kk:
+    '💎 <b>Deka Pro</b> — көбірек қажет ететіндерге:\n' +
+    '• Шексіз сұрақтар мен басым жауаптар\n' +
+    '• Сіздің тапсыру мерзіміңізге бейімделген еске салулар\n' +
+    '• Айналым мен салық есебін файлмен жүктеу\n\n' +
+    'Әзірге әзірленуде. «Тіркелу» батырмасын басыңыз — ерте қол жеткізу ашылғанда жазамын. Бұл ешнәрсеге міндеттемейді.',
+  en:
+    '💎 <b>Deka Pro</b> — for those who need more:\n' +
+    '• Unlimited questions and priority answers\n' +
+    '• Personal reminders tuned to your filing dates\n' +
+    '• Export of turnover and tax estimate as a file\n\n' +
+    "Still in the works. Tap «Join» and I'll message you when early access opens. No commitment.",
+};
+
+export const PRO_JOIN_BUTTON: Record<Lang, string> = {
+  ru: '✅ Записаться в лист ожидания',
+  kk: '✅ Күту тізіміне тіркелу',
+  en: '✅ Join the waitlist',
+};
+
+export const PRO_JOINED: Record<Lang, string> = {
+  ru: '🙌 Готово! Ты в списке — напишу, когда откроется ранний доступ Deka Pro. Спасибо за интерес!',
+  kk: '🙌 Дайын! Сіз тізімдесіз — Deka Pro ерте қол жеткізуі ашылғанда жазамын. Қызығушылығыңызға рахмет!',
+  en: "🙌 Done! You're on the list — I'll message you when Deka Pro early access opens. Thanks for your interest!",
+};
+
+// ── Приватность (удаление своих данных) ────────────────────────────────────
+export const PRIVACY_CONFIRM: Record<Lang, string> = {
+  ru:
+    '🗑️ Удалить все твои данные?\n\n' +
+    'Сотру записи оборота и отпишу от напоминаний. Это <b>безвозвратно</b>.\n' +
+    '<i>Сами вопросы к боту я и так не храню.</i>',
+  kk:
+    '🗑️ Барлық деректеріңізді жоямын ба?\n\n' +
+    'Айналым жазбаларын өшіріп, еске салулардан бас тартамын. Бұл <b>қайтарылмайды</b>.\n' +
+    '<i>Ботқа қойған сұрақтарыңызды бәрібір сақтамаймын.</i>',
+  en:
+    '🗑️ Delete all your data?\n\n' +
+    "I'll erase turnover records and unsubscribe you from reminders. This is <b>permanent</b>.\n" +
+    '<i>Your questions to the bot are never stored anyway.</i>',
+};
+
+export const PRIVACY_YES: Record<Lang, string> = {
+  ru: '🗑️ Да, удалить всё',
+  kk: '🗑️ Иә, бәрін жою',
+  en: '🗑️ Yes, delete everything',
+};
+
+export const PRIVACY_DONE: Record<Lang, string> = {
+  ru: '✅ Готово. Все твои данные удалены. Можешь начать с чистого листа в любой момент.',
+  kk: '✅ Дайын. Барлық деректеріңіз жойылды. Кез келген уақытта таза беттен бастай аласыз.',
+  en: '✅ Done. All your data is deleted. You can start fresh anytime.',
+};
+
+/** Подсказка «что дальше» под успешным ответом — воронка к инструментам. */
+export const FOLLOWUP_HINT: Record<Lang, string> = {
+  ru: 'Что дальше? 👇',
+  kk: 'Әрі қарай ше? 👇',
+  en: "What's next? 👇",
 };

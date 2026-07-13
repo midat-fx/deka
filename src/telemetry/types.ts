@@ -16,6 +16,9 @@ export type EventName =
   | 'turnover' // трекер оборота (detail: add | show | reset)
   | 'deadlines' // дедлайны/напоминания (detail: show | sub | unsub)
   | 'lang' // смена языка (detail: ru | kk | en)
+  | 'settings' // открыл экран настроек (detail: show)
+  | 'privacy' // удаление своих данных (detail: wipe)
+  | 'pro' // интерес к Deka Pro (detail: waitlist) — замер готовности платить
   | 'intent'; // сработал текст-роутер (detail: menu:* | set_lang | log_income | …)
 
 export interface EventTracker {

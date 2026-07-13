@@ -24,6 +24,15 @@ import {
   YES,
   NO,
   CANCELLED,
+  SETTINGS_TITLE,
+  SETTINGS_BTN,
+  REM_TOGGLED,
+  PRO_ABOUT,
+  PRO_JOIN_BUTTON,
+  PRO_JOINED,
+  PRIVACY_CONFIRM,
+  PRIVACY_YES,
+  PRIVACY_DONE,
   type Lang,
 } from '../i18n/i18n';
 import type { PrefsStore } from '../store/prefs';
@@ -38,6 +47,33 @@ export async function sendForm910(ctx: Context, turnover: TurnoverStore, uid: nu
   const totals = await turnover.totals(uid);
   await ctx.reply(renderForm910(totals.yearTotal > 0 ? totals.yearTotal : null), {
     parse_mode: 'HTML',
+    ...NO_PREVIEW,
+  });
+}
+
+/** Клавиатура экрана настроек. Кнопка напоминаний отражает текущее состояние. */
+function settingsKeyboard(lang: Lang, remindersOn: boolean): InlineKeyboard {
+  return new InlineKeyboard()
+    .text(SETTINGS_BTN.language[lang], 'set|lang')
+    .row()
+    .text(remindersOn ? SETTINGS_BTN.remindersOn[lang] : SETTINGS_BTN.remindersOff[lang], 'set|rem')
+    .row()
+    .text(SETTINGS_BTN.pro[lang], 'set|pro')
+    .row()
+    .text(SETTINGS_BTN.wipe[lang], 'set|wipe');
+}
+
+/** Показать экран «⚙️ Настройки» (зовёт и меню-кнопка, и /settings). */
+export async function sendSettings(
+  ctx: Context,
+  reminders: ReminderStore,
+  uid: number,
+  lang: Lang,
+): Promise<void> {
+  const on = await reminders.isSubscribed(uid);
+  await ctx.reply(SETTINGS_TITLE[lang], {
+    parse_mode: 'HTML',
+    reply_markup: settingsKeyboard(lang, on),
     ...NO_PREVIEW,
   });
 }
@@ -83,6 +119,9 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
           case 'language':
             await ctx.reply(TIL_PROMPT[lang], { reply_markup: languageKeyboard() });
             return;
+          case 'settings':
+            telemetry?.track(uid, 'settings', 'show');
+            return sendSettings(ctx, reminders, uid, lang);
           case 'help':
             await ctx.reply(HELP[lang], { reply_markup: mainKeyboard(lang), ...NO_PREVIEW });
             return;
@@ -132,6 +171,113 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
     if (uid === undefined) return;
     telemetry?.track(uid, 'intent', 'form910');
     await sendForm910(ctx, turnover, uid);
+  });
+
+  bot.command('settings', async (ctx) => {
+    const uid = ctx.from?.id;
+    if (uid === undefined) return;
+    telemetry?.track(uid, 'settings', 'show');
+    await sendSettings(ctx, reminders, uid, await langOf(uid));
+  });
+
+  bot.command('privacy', async (ctx) => {
+    const uid = ctx.from?.id;
+    if (uid === undefined) return;
+    const lang = await langOf(uid);
+    await ctx.reply(PRIVACY_CONFIRM[lang], {
+      parse_mode: 'HTML',
+      reply_markup: new InlineKeyboard()
+        .text(PRIVACY_YES[lang], 'set|wipe2')
+        .row()
+        .text(NO[lang], 'set|wipex'),
+    });
+  });
+
+  // Экран настроек: язык · напоминания (тумблер) · Deka Pro · удалить данные.
+  bot.callbackQuery(/^set\|/, async (ctx) => {
+    const uid = ctx.from?.id;
+    if (uid === undefined) return;
+    const action = (ctx.callbackQuery.data ?? '').split('|')[1] ?? '';
+    const lang = await langOf(uid);
+
+    switch (action) {
+      case 'lang':
+        await ctx.answerCallbackQuery();
+        await ctx.reply(TIL_PROMPT[lang], { reply_markup: languageKeyboard() });
+        return;
+
+      case 'rem': {
+        const on = !(await reminders.isSubscribed(uid));
+        if (on) await reminders.subscribe(uid);
+        else await reminders.unsubscribe(uid);
+        telemetry?.track(uid, 'deadlines', on ? 'sub' : 'unsub');
+        await ctx.answerCallbackQuery(REM_TOGGLED[lang](on));
+        await ctx.editMessageReplyMarkup({ reply_markup: settingsKeyboard(lang, on) });
+        return;
+      }
+
+      case 'pro':
+        telemetry?.track(uid, 'pro', 'view');
+        await ctx.answerCallbackQuery();
+        await ctx.reply(PRO_ABOUT[lang], {
+          parse_mode: 'HTML',
+          reply_markup: new InlineKeyboard().text(PRO_JOIN_BUTTON[lang], 'set|projoin'),
+          ...NO_PREVIEW,
+        });
+        return;
+
+      case 'projoin':
+        // Реальный сигнал готовности платить (в отличие от простого «view»).
+        telemetry?.track(uid, 'pro', 'waitlist');
+        await ctx.answerCallbackQuery('🙌');
+        await ctx.editMessageText(PRO_JOINED[lang]);
+        return;
+
+      case 'wipe':
+        await ctx.answerCallbackQuery();
+        await ctx.editMessageText(PRIVACY_CONFIRM[lang], {
+          parse_mode: 'HTML',
+          reply_markup: new InlineKeyboard()
+            .text(PRIVACY_YES[lang], 'set|wipe2')
+            .row()
+            .text(NO[lang], 'set|wipex'),
+        });
+        return;
+
+      case 'wipe2':
+        await turnover.reset(uid);
+        await reminders.unsubscribe(uid);
+        if (prefs) await prefs.clear(uid);
+        telemetry?.track(uid, 'privacy', 'wipe');
+        await ctx.answerCallbackQuery('🗑️');
+        await ctx.editMessageText(PRIVACY_DONE[lang]);
+        return;
+
+      case 'wipex':
+        await ctx.answerCallbackQuery();
+        await ctx.editMessageText(SETTINGS_TITLE[lang], {
+          parse_mode: 'HTML',
+          reply_markup: settingsKeyboard(lang, await reminders.isSubscribed(uid)),
+        });
+        return;
+    }
+  });
+
+  // Follow-up кнопки под ответом → инструменты (обработчик здесь: есть все зависимости).
+  bot.callbackQuery(/^nav\|/, async (ctx) => {
+    const uid = ctx.from?.id;
+    await ctx.answerCallbackQuery();
+    if (uid === undefined) return;
+    const dest = (ctx.callbackQuery.data ?? '').split('|')[1] ?? '';
+    telemetry?.track(uid, 'intent', `nav:${dest}`);
+    switch (dest) {
+      case '910':
+        return sendForm910(ctx, turnover, uid);
+      case 'oborot':
+        return sendTurnoverStatus(ctx, turnover, uid);
+      case 'dedlayny':
+        return sendDeadlinesView(ctx, reminders, uid);
+    }
   });
 
   bot.callbackQuery(/^inc\|/, async (ctx) => {

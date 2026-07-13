@@ -19,6 +19,7 @@ import {
   KGD_BUTTON,
   type Lang,
 } from '../i18n/i18n';
+import { followupKeyboard } from './keyboard';
 import type { PrefsStore } from '../store/prefs';
 import { cacheKey, type AnswerCache } from '../store/answer-cache';
 import type { EventTracker } from '../telemetry/types';
@@ -126,7 +127,11 @@ export function registerSearch(
     const cached = qkey ? await cache!.get(qkey) : null;
     if (cached && cached.ageMs < CACHE_FRESH_MS) {
       telemetry?.track(uid, 'answer', 'cache_hit');
-      await ctx.reply(cached.reply, { parse_mode: 'HTML', link_preview_options: { is_disabled: true } });
+      await ctx.reply(cached.reply, {
+        parse_mode: 'HTML',
+        reply_markup: followupKeyboard(lang),
+        link_preview_options: { is_disabled: true },
+      });
       return;
     }
 
@@ -198,6 +203,7 @@ export function registerSearch(
 
     await ctx.reply(reply, {
       parse_mode: 'HTML',
+      reply_markup: followupKeyboard(lang),
       link_preview_options: { is_disabled: true },
     });
   };
