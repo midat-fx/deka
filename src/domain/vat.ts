@@ -20,16 +20,18 @@ const ADILET = 'https://adilet.zan.kz/rus/docs/K2500000214';
 /** Якорь Ст. 503 в adilet (сверен с anchor из корпуса). */
 const ART503 = `<a href="${ADILET}#z8609">Ст. 503</a>`;
 
-/** НДС сверху (net → +16%). */
+/** НДС сверху (net → +16%). Округляем и net, чтобы не протекала дробь. */
 export function vatOnTop(net: number): { vat: number; gross: number } {
-  const vat = Math.round(net * VAT_RATE);
-  return { vat, gross: net + vat };
+  const n = Math.round(net);
+  const vat = Math.round(n * VAT_RATE);
+  return { vat, gross: n + vat };
 }
 
 /** НДС внутри суммы (gross содержит НДС → выделить). */
 export function vatIncluded(gross: number): { vat: number; net: number } {
-  const net = Math.round(gross / (1 + VAT_RATE));
-  return { vat: gross - net, net };
+  const g = Math.round(gross);
+  const net = Math.round(g / (1 + VAT_RATE));
+  return { vat: g - net, net };
 }
 
 /**

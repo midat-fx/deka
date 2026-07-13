@@ -50,6 +50,33 @@ describe('роутер намерений (инцидент «да» и чело
     expect(routeIntent('да будет ли штраф за просрочку 910?')).toBeNull(); // «да» в начале вопроса
     expect(routeIntent('заработал ли я право на упрощёнку?')).toBeNull(); // глагол без суммы
   });
+
+  // Регрессии из сквозной верификации (год/процент/язык-в-вопросе не перехватывать)
+  it('вопрос про ставку/год НДС — в поиск, а не в калькулятор', () => {
+    expect(routeIntent('ставка ндс 2026')).toBeNull();
+    expect(routeIntent('какая ставка ндс в 2025 году')).toBeNull();
+    expect(routeIntent('ндс 16%')).toBeNull();
+    expect(routeIntent('ндс 16 процентов')).toBeNull();
+    expect(routeIntent('когда вводят ндс с 2026')).toBeNull();
+    expect(routeIntent('сколько отложить в 2026')).toBeNull();
+  });
+  it('калькулятор НДС/отложить работает на реальных суммах', () => {
+    expect(routeIntent('ндс с 500000')).toEqual({ kind: 'vat', amount: 500_000 });
+    expect(routeIntent('ндс 500000')).toEqual({ kind: 'vat', amount: 500_000 });
+    expect(routeIntent('ндс 500 тыс')).toEqual({ kind: 'vat', amount: 500_000 });
+    expect(routeIntent('сколько отложить с 300000')).toEqual({ kind: 'setaside', amount: 300_000 });
+  });
+  it('короткая фраза со словом-языком — вопрос, а не смена языка', () => {
+    expect(routeIntent('казахский налог')).toBeNull();
+    expect(routeIntent('английский для ип')).toBeNull();
+    expect(routeIntent('ндс на казахском')).toBeNull();
+    expect(routeIntent('қазақша')).toEqual({ kind: 'set_lang', lang: 'kk' }); // голое название — переключаем
+  });
+  it('голый 4-значный год не пишется как доход', () => {
+    expect(routeIntent('2025')).toBeNull();
+    expect(routeIntent('2026')).toBeNull();
+    expect(routeIntent('500000')).toEqual({ kind: 'log_income', amount: 500_000 });
+  });
 });
 
 describe('stateless-кодирование визарда (переживает рестарты изолятов)', () => {

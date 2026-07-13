@@ -124,25 +124,40 @@ export function validateAnswer(text: string, hits: SearchHit[]): boolean {
   return false;
 }
 
-/** Число перед «%» или «процент» → нормализованная строка («24,8%» → «24.8»). */
+/**
+ * Число перед «%»/«процент»/«пайыз» → КАНОНИЧЕСКОЕ числовое значение как строка
+ * («24,8%»→«24.8», «7,0 процента»→«7», «16 пайыз»→«16»). parseFloat убирает
+ * хвостовой ноль, поэтому «7%» ≡ «7,0 процента» (иначе корректный ответ бракуется).
+ */
 function extractPercents(text: string): string[] {
   const out: string[] = [];
-  for (const m of text.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:%|процент)/gi)) {
-    out.push(m[1]!.replace(',', '.'));
+  for (const m of text.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:%|процент|пайыз|percent)/gi)) {
+    const n = parseFloat(m[1]!.replace(',', '.'));
+    if (!Number.isNaN(n)) out.push(String(n));
   }
+  return out;
+}
+
+/** Номера статей, на которые ССЫЛАЕТСЯ ответ (по формам цитат ru/kk/en). */
+function citedArticles(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const re of CITE_PATTERNS) for (const m of text.matchAll(re)) if (m[1]) out.add(m[1]);
   return out;
 }
 
 /**
  * F1 — сверка ставок: КАЖДЫЙ процент в ответе обязан дословно присутствовать в
- * тексте статей-источников. Ловит подмену ставки (модель сказала «НДС 12%», а
- * в кодексе 16%). Ставки в НК формулируются как «N процентов», поэтому «16%» из
- * ответа матчится с «16 процентов» из фрагмента. Возвращает неподтверждённые
- * проценты (пусто — все сверены). Проверяем по ПОЛНОМУ тексту чанка, а не по
- * усечённому промпту, чтобы не забраковать корректную ставку из-за обрезки.
+ * тексте статей, НА КОТОРЫЕ ССЫЛАЕТСЯ ответ (а не во всех 8 хитах — иначе
+ * проценты соседних статей «легализуют» чужую ставку). Ловит подмену ставки
+ * (модель сказала «НДС 12%», а в кодексе 16%). Проверяем по ПОЛНОМУ тексту чанка.
+ * Остаточное ограничение: если одна статья перечисляет несколько ставок (Ст.503:
+ * 16/5/10), подмену на льготную в рамках ЭТОЙ статьи не поймать без семантики.
  */
 export function unverifiedPercents(text: string, hits: SearchHit[]): string[] {
-  const inCode = new Set(hits.flatMap((h) => extractPercents(h.chunk.text)));
+  const cited = citedArticles(text);
+  const scope = hits.filter((h) => cited.has(h.chunk.article));
+  const base = scope.length > 0 ? scope : hits;
+  const inCode = new Set(base.flatMap((h) => extractPercents(h.chunk.text)));
   return extractPercents(text).filter((p) => !inCode.has(p));
 }
 

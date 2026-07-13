@@ -62,6 +62,39 @@ function amountFromPhrase(text: string): number | null {
   return parseAmount(`${m[1]}${unit}`);
 }
 
+/**
+ * ДЕНЕЖНАЯ сумма для калькуляторов НДС/«отложить» — в отличие от amountFromPhrase
+ * НЕ принимает год и ставку (иначе «ставка ндс 2026» и «ндс 16%» уходили в
+ * калькулятор вместо поиска — нарушение grounded). Принимаем число, если:
+ *  • за ним НЕ идёт %/процент/пайыз (это ставка) и НЕ идёт год/жыл/year;
+ *  • есть явный маркер денег: предлог «с/со/на» (отдельным словом), единица
+ *    (млн/тыс/к…) или валюта (тг/₸); ИЛИ голое число ≥ 10000 (явно сумма, не
+ *    год/ставка). Иначе null → фраза пойдёт в поиск по кодексу.
+ */
+function sumFromPhrase(text: string): number | null {
+  const re =
+    /(?:(?:^|\s)(с|со|на)\s+)?([\d][\d\s.,]*\d|\d)\s*(млрд|млн|тыс|мың|к|k|m)?\s*(тг|тенге|₸|kzt)?\s*(%|процент\w*|пайыз|год\w*|жыл\w*|year)?/gi;
+  for (const m of text.matchAll(re)) {
+    const prep = m[1];
+    const num = m[2] ?? '';
+    const unitRaw = (m[3] ?? '').toLowerCase();
+    const cur = m[4];
+    const suffix = (m[5] ?? '').toLowerCase();
+    if (suffix) continue; // «16%», «16 процентов», «2026 году» — не сумма
+    const digits = num.replace(/[\s.,]/g, '');
+    if (!digits) continue;
+    // 4-значный год (19xx/20xx) БЕЗ единицы/валюты — не сумма, даже с предлогом
+    // «с» («когда вводят ндс с 2026»). Явное «с 2026 тг» — уже сумма (есть валюта).
+    if (/^(19|20)\d\d$/.test(digits) && !unitRaw && !cur) continue;
+    const hasMarker = Boolean(prep || unitRaw || cur);
+    if (!hasMarker && Number(digits) < 10_000) continue; // мелкое голое число — скорее ставка/счётчик
+    const unit = unitRaw === 'мың' || unitRaw === 'k' ? 'к' : unitRaw === 'm' ? 'млн' : unitRaw;
+    const amount = parseAmount(`${num}${unit}`);
+    if (amount !== null) return amount;
+  }
+  return null;
+}
+
 export function routeIntent(text: string): Intent | null {
   const t = text.trim();
 
@@ -69,10 +102,13 @@ export function routeIntent(text: string): Intent | null {
   const menu = matchMenuButton(t);
   if (menu) return { kind: 'menu', action: menu };
 
-  // 2. Смена языка человеческой фразой. Сначала ищем целевой язык.
+  // 2. Смена языка: либо явный глагол переключения, либо ВСЯ фраза — название
+  //    языка. Раньше «≤3 слова с упоминанием языка» ложно переключало интерфейс
+  //    на вопросах «казахский налог», «английский для ип» — теперь они в поиск.
+  const BARE_LANG_NAME =
+    /^(қазақша|қазақ тілі|казахск\w*|kazakh|qazaq|русск\w*|орысша|по-русски|russian|англ\w*|ағылшын\w*|english)[.!?\s]*$/i;
   for (const [re, lang] of LANG_TARGETS) {
-    if (re.test(t) && (LANG_SWITCH.test(t) || t.split(/\s+/).length <= 3)) {
-      // «переключи на казахский» ИЛИ короткое «қазақша» / «english»
+    if (re.test(t) && (LANG_SWITCH.test(t) || BARE_LANG_NAME.test(t))) {
       return { kind: 'set_lang', lang };
     }
   }
@@ -94,11 +130,11 @@ export function routeIntent(text: string): Intent | null {
   // 4a. Калькулятор НДС и «сколько отложить» — только когда есть И слово-триггер,
   //     И сумма. «Ндс/отложить» без числа — это вопрос → уходит в поиск.
   if (VAT_KW.test(t)) {
-    const amount = amountFromPhrase(t);
+    const amount = sumFromPhrase(t);
     if (amount !== null) return { kind: 'vat', amount };
   }
   if (SETASIDE_KW.test(t)) {
-    const amount = amountFromPhrase(t);
+    const amount = sumFromPhrase(t);
     if (amount !== null) return { kind: 'setaside', amount };
   }
 
@@ -108,8 +144,11 @@ export function routeIntent(text: string): Intent | null {
     if (amount !== null) return { kind: 'log_income', amount };
   }
   if (BARE_AMOUNT.test(t)) {
-    const amount = parseAmount(t.replace(/[.!\s]+$/, ''));
-    if (amount !== null) return { kind: 'log_income', amount };
+    const cleaned = t.replace(/[.!\s]+$/, '');
+    const amount = parseAmount(cleaned);
+    // Голый 4-значный год («2025», «2026») без единицы/валюты — не доход.
+    const bareYear = /^(19|20)\d\d$/.test(cleaned.replace(/\s/g, ''));
+    if (amount !== null && !bareYear) return { kind: 'log_income', amount };
   }
 
   // 6. Короткие «дедлайны» / «какой режим».

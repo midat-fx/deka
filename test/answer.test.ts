@@ -107,4 +107,19 @@ describe('F1 — сверка ставок с текстом (unverifiedPercents
   it('ответ без процентов — нечего проверять', () => {
     expect(unverifiedPercents('Лимит 300 МРП в месяц.', vatHits)).toEqual([]);
   });
+
+  // Регрессии из сквозной верификации
+  it('хвостовой ноль: «7%» ≡ «7,0 процента» в тексте — НЕ ложный отказ', () => {
+    const h822: SearchHit[] = [{ score: 9, chunk: { id: '822#1', article: '822', title: 't', section: '', chapter: '', anchor: '', paraFrom: 1, paraTo: 1, text: 'доля составляет 7,0 процента и 24,8 процента' } }];
+    expect(unverifiedPercents('Доля ИПН 7% (Ст.822).', h822)).toEqual([]);
+  });
+  it('казахское «пайыз» извлекается и сверяется', () => {
+    expect(unverifiedPercents('ҚҚС 16 пайыз (Ст.503).', vatHits)).toEqual([]);
+    expect(unverifiedPercents('ҚҚС 12 пайыз (Ст.503).', vatHits)).toEqual(['12']);
+  });
+  it('сверка только по ЦИТИРУЕМОЙ статье, не по всем хитам', () => {
+    const h822: SearchHit[] = [{ score: 8, chunk: { id: '822#1', article: '822', title: 't', section: '', chapter: '', anchor: '', paraFrom: 1, paraTo: 1, text: 'доля 24,8 процента' } }];
+    // 24,8% есть в 822, но ответ цитирует ТОЛЬКО 503 → 24,8 не подтверждается
+    expect(unverifiedPercents('Ставка НДС 24,8% (Ст.503).', [...vatHits, ...h822])).toEqual(['24.8']);
+  });
 });
