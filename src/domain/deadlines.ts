@@ -10,6 +10,14 @@
  * Список сознательно короткий и честный — только то, что сверено. Расширяем
  * по мере проверки других форм (200.00 и т.д.).
  */
+import {
+  formatDateI18n,
+  pluralDaysI18n,
+  DEADLINE_I18N,
+  DEADLINES_UI,
+  type Lang,
+} from '../i18n/i18n';
+
 export interface Deadline {
   id: string;
   title: string;
@@ -68,54 +76,44 @@ export function dueReminders(
 
 // --- Отрисовка (чистые функции, без Telegram — переиспользуются ботом и cron) ---
 
-const RU_MONTHS_GEN = [
-  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
-];
-
-export function formatDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return `${d} ${RU_MONTHS_GEN[(m ?? 1) - 1]} ${y}`;
+/** Заголовок и пояснение дедлайна на нужном языке (ru — из самого Deadline). */
+function localized(d: Deadline, lang: Lang): { title: string; note: string } {
+  const o = DEADLINE_I18N[d.id];
+  if (!o || lang === 'ru') return { title: d.title, note: d.note };
+  return { title: o.title[lang] ?? d.title, note: o.note[lang] ?? d.note };
 }
 
-/** Правильное склонение: «1 день», «2 дня», «7 дней», «11 дней». */
-export function pluralDays(n: number): string {
-  const abs = Math.abs(n);
-  const last2 = abs % 100;
-  const last1 = abs % 10;
-  if (last2 >= 11 && last2 <= 14) return `${n} дней`;
-  if (last1 === 1) return `${n} день`;
-  if (last1 >= 2 && last1 <= 4) return `${n} дня`;
-  return `${n} дней`;
-}
-
-export function renderUpcoming(today: Date): string {
+export function renderUpcoming(today: Date, lang: Lang = 'ru'): string {
   const up = upcomingDeadlines(today);
-  const lines = ['📅 <b>Ближайшие налоговые дедлайны</b>', ''];
+  const ui = DEADLINES_UI;
+  const lines = [ui.title[lang], ''];
   if (up.length === 0) {
-    lines.push('В моём списке ближайших сроков сейчас нет.');
+    lines.push(ui.empty[lang]);
   } else {
     for (const u of up) {
       const d = u.deadline;
-      const when = u.daysToSubmit > 0 ? `через ${pluralDays(u.daysToSubmit)}` : 'сегодня последний день';
-      lines.push(`• <b>${d.title}</b> — ${when}`);
-      const pay = d.payDate ? `, уплатить до ${formatDate(d.payDate)}` : '';
-      lines.push(`  Сдать до ${formatDate(d.submitDate)}${pay}`);
-      lines.push(`  <i>${d.note}</i>`);
+      const { title, note } = localized(d, lang);
+      const when = u.daysToSubmit > 0 ? ui.inDays[lang](pluralDaysI18n(u.daysToSubmit, lang)) : ui.lastDay[lang];
+      lines.push(`• <b>${title}</b> — ${when}`);
+      const pay = d.payDate ? ui.payBy[lang](formatDateI18n(d.payDate, lang)) : '';
+      lines.push(`  ${ui.submitBy[lang](formatDateI18n(d.submitDate, lang))}${pay}`);
+      lines.push(`  <i>${note}</i>`);
       lines.push('');
     }
   }
-  lines.push('<i>Выпадает на выходной — переносится на ближайший рабочий день. Ориентир, сверяйся с КГД (1414).</i>');
+  lines.push(ui.footer[lang]);
   return lines.join('\n');
 }
 
-export function renderReminder(deadline: Deadline, today: Date): string {
+export function renderReminder(deadline: Deadline, today: Date, lang: Lang = 'ru'): string {
+  const ui = DEADLINES_UI;
   const days = daysUntil(today, deadline.submitDate);
-  const pay = deadline.payDate ? `, уплатить до ${formatDate(deadline.payDate)}` : '';
+  const { title, note } = localized(deadline, lang);
+  const pay = deadline.payDate ? ui.payBy[lang](formatDateI18n(deadline.payDate, lang)) : '';
   return (
-    `🔔 <b>Напоминание о дедлайне</b>\n\n` +
-    `Через ${pluralDays(days)} — <b>${deadline.title}</b>.\n${deadline.note}\n` +
-    `Сдать до ${formatDate(deadline.submitDate)}${pay}.\n\n` +
-    `<i>Отключить напоминания: /napomni стоп</i>`
+    `${ui.reminderTitle[lang]}\n\n` +
+    `${ui.reminderBody[lang](pluralDaysI18n(days, lang), title)}\n${note}\n` +
+    `${ui.submitBy[lang](formatDateI18n(deadline.submitDate, lang))}${pay}.\n\n` +
+    `${ui.reminderOff[lang]}`
   );
 }

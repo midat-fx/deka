@@ -26,6 +26,7 @@ import { D1Reminders, type D1RemindersDB } from './store/reminders';
 import { D1Prefs, type D1PrefsDB } from './store/prefs';
 import { D1AnswerCache, type D1CacheDB } from './store/answer-cache';
 import { dueReminders, renderReminder } from './domain/deadlines';
+import type { Lang } from './i18n/i18n';
 import indexData from '../data/corpus/index.json';
 
 export interface Env {
@@ -66,8 +67,8 @@ export default {
       const prefs = new D1Prefs(env.DB as unknown as D1PrefsDB, env.TELEMETRY_SALT ?? 'deka-mvp-salt');
       const cache = new D1AnswerCache(env.DB as unknown as D1CacheDB, env.TELEMETRY_SALT ?? 'deka-mvp-salt');
       registerWizard(bot, telemetry, prefs);
-      registerTurnover(bot, turnover, telemetry);
-      registerDeadlines(bot, reminders, telemetry);
+      registerTurnover(bot, turnover, telemetry, prefs);
+      registerDeadlines(bot, reminders, telemetry, prefs);
       // Роутер человеческих фраз и кнопок меню — ДО поиска.
       registerTextRouter(bot, { prefs, turnover, reminders, telemetry });
       registerSearch(bot, index, telemetry, llm, retrieval, prefs, cache); // последним: ловит свободный текст
@@ -120,12 +121,27 @@ export default {
     const subs = await reminders.listSubscribers();
     if (subs.length === 0) return;
 
+    // Язык каждого подписчика (один раз) — напоминание придёт на его языке.
+    const salt = env.TELEMETRY_SALT ?? 'deka-mvp-salt';
+    const prefs = new D1Prefs(env.DB as unknown as D1PrefsDB, salt);
+    const langByChat = new Map<number, Lang>();
+    await Promise.all(
+      subs.map(async (id) => langByChat.set(id, (await prefs.getLang(id)) ?? 'ru')),
+    );
+
     for (const d of due) {
-      const text = renderReminder(d, today);
+      // Рендерим на всех языках заранее — потом раздаём по языку подписчика.
+      const texts: Record<Lang, string> = {
+        ru: renderReminder(d, today, 'ru'),
+        kk: renderReminder(d, today, 'kk'),
+        en: renderReminder(d, today, 'en'),
+      };
       for (let i = 0; i < subs.length; i += 25) {
         const chunk = subs.slice(i, i + 25);
         await Promise.allSettled(
-          chunk.map((chatId) => sendReminder(env.BOT_TOKEN, chatId, text, reminders)),
+          chunk.map((chatId) =>
+            sendReminder(env.BOT_TOKEN, chatId, texts[langByChat.get(chatId) ?? 'ru'], reminders),
+          ),
         );
         if (i + 25 < subs.length) await sleep(1_100);
       }

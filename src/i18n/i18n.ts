@@ -248,3 +248,211 @@ export const FOLLOWUP_HINT: Record<Lang, string> = {
   kk: 'Әрі қарай ше? 👇',
   en: "What's next? 👇",
 };
+
+// ── Названия месяцев и склонения (для трекера и дедлайнов) ─────────────────
+/** Именительный падеж — для «июль 2026 год» в статусе оборота. */
+export const MONTHS_NOM: Record<Lang, string[]> = {
+  ru: ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'],
+  kk: ['қаңтар', 'ақпан', 'наурыз', 'сәуір', 'мамыр', 'маусым', 'шілде', 'тамыз', 'қыркүйек', 'қазан', 'қараша', 'желтоқсан'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+};
+
+/** Родительный падеж (только ru) — для дат «15 августа». kk/en берут именительный. */
+const RU_MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+/** «2026-08-15» → дата словами на языке пользователя. */
+export function formatDateI18n(iso: string, lang: Lang = 'ru'): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const mi = (m ?? 1) - 1;
+  if (lang === 'kk') return `${y} жылғы ${d} ${MONTHS_NOM.kk[mi]}`;
+  if (lang === 'en') return `${d} ${MONTHS_NOM.en[mi]} ${y}`;
+  return `${d} ${RU_MONTHS_GEN[mi]} ${y}`;
+}
+
+/** Склонение дней: ru — «1 день/2 дня/7 дней»; kk — «7 күн»; en — «1 day/7 days». */
+export function pluralDaysI18n(n: number, lang: Lang = 'ru'): string {
+  if (lang === 'kk') return `${n} күн`;
+  if (lang === 'en') return `${n} ${Math.abs(n) === 1 ? 'day' : 'days'}`;
+  const abs = Math.abs(n);
+  const last2 = abs % 100;
+  const last1 = abs % 10;
+  if (last2 >= 11 && last2 <= 14) return `${n} дней`;
+  if (last1 === 1) return `${n} день`;
+  if (last1 >= 2 && last1 <= 4) return `${n} дня`;
+  return `${n} дней`;
+}
+
+// ── Трекер оборота ─────────────────────────────────────────────────────────
+type Amt = string; // отформатированная сумма (formatTenge)
+
+export const TURNOVER_UI = {
+  title: { ru: '📊 <b>Твой оборот</b>', kk: '📊 <b>Сенің айналымың</b>', en: '📊 <b>Your turnover</b>' },
+  period: {
+    ru: (m: string, y: number, mt: Amt, yt: Amt) => `${m}: <b>${mt}</b> · ${y} год: <b>${yt}</b>`,
+    kk: (m: string, y: number, mt: Amt, yt: Amt) => `${m}: <b>${mt}</b> · ${y} жыл: <b>${yt}</b>`,
+    en: (m: string, y: number, mt: Amt, yt: Amt) => `${m}: <b>${mt}</b> · ${y}: <b>${yt}</b>`,
+  },
+  lineSelfEmployed: { ru: 'Самозанятый — лимит месяца', kk: 'Өзін-өзі жұмыспен қамту — ай шегі', en: 'Self-employed — monthly limit' },
+  lineVat: { ru: 'Порог НДС — за год', kk: 'ҚҚС шегі — жылына', en: 'VAT threshold — per year' },
+  lineSimplified: { ru: 'Упрощёнка — потолок года', kk: 'Оңайлатылған — жылдық шегі', en: 'Simplified — annual cap' },
+  of: { ru: 'из', kk: '/', en: 'of' },
+  logHint: {
+    ru: '<i>Записать доход: просто напиши сумму, например «500 000» или «1.3 млн». Кнопка ➕ в меню тоже работает.</i>',
+    kk: '<i>Табыс жазу: жай ғана соманы жазыңыз, мысалы «500 000» немесе «1.3 млн». Мәзірдегі ➕ батырмасы да жұмыс істейді.</i>',
+    en: '<i>Log income: just type the amount, e.g. «500 000» or «1.3m». The ➕ menu button works too.</i>',
+  },
+  privacyNote: {
+    ru: '<i>Данные анонимны (без имени), храним только суммы. Ориентир, не бухучёт.</i>',
+    kk: '<i>Деректер анонимді (атсыз), тек сомаларды сақтаймыз. Бағдар, бухгалтерия емес.</i>',
+    en: '<i>Data is anonymous (no name), we store only amounts. Guidance, not bookkeeping.</i>',
+  },
+  logged: {
+    ru: (a: Amt) => `✅ Записал <b>+${a}</b>.`,
+    kk: (a: Amt) => `✅ <b>+${a}</b> жаздым.`,
+    en: (a: Amt) => `✅ Logged <b>+${a}</b>.`,
+  },
+  undoBtn: { ru: '↩️ Отменить эту запись', kk: '↩️ Бұл жазбаны болдырмау', en: '↩️ Undo this entry' },
+  parseFail: {
+    ru: 'Не понял сумму. Напиши, например: 500000 (или «1.3 млн», «400 тыс»).',
+    kk: 'Соманы түсінбедім. Мысалы: 500000 (немесе «1.3 млн», «400 мың») деп жазыңыз.',
+    en: "Couldn't parse the amount. Type e.g. 500000 (or «1.3m»).",
+  },
+  resetConfirm: {
+    ru: (yt: Amt) => `Точно обнулить весь учёт (<b>${yt}</b> за год)? Это безвозвратно.`,
+    kk: (yt: Amt) => `Барлық есепті нөлдейміз бе (жылына <b>${yt}</b>)? Бұл қайтарылмайды.`,
+    en: (yt: Amt) => `Reset all records (<b>${yt}</b> for the year)? This is permanent.`,
+  },
+  resetYes: { ru: '🗑 Да, обнулить', kk: '🗑 Иә, нөлдеу', en: '🗑 Yes, reset' },
+  resetNo: { ru: 'Отмена', kk: 'Болдырмау', en: 'Cancel' },
+  resetDone: { ru: 'Учёт обнулён', kk: 'Есеп нөлденді', en: 'Records reset' },
+  resetDoneMsg: {
+    ru: 'Обнулил твой учёт оборота. Начнём заново: просто напиши сумму дохода.',
+    kk: 'Айналым есебіңді нөлдедім. Қайта бастайық: жай ғана табыс сомасын жаз.',
+    en: 'Your turnover records are reset. Start over: just type an income amount.',
+  },
+  resetCancelled: { ru: 'Отменено', kk: 'Болдырылмады', en: 'Cancelled' },
+  resetCancelMsg: {
+    ru: 'Ок, ничего не трогаю. Учёт на месте.',
+    kk: 'Жарайды, ештеңеге тиіспеймін. Есеп орнында.',
+    en: 'Ok, leaving everything as is. Records intact.',
+  },
+  undoDone: { ru: 'Запись отменена', kk: 'Жазба болдырылмады', en: 'Entry undone' },
+  undoNothing: { ru: 'Нечего отменять', kk: 'Болдырмайтын ештеңе жоқ', en: 'Nothing to undo' },
+  undoMsg: {
+    ru: (a: Amt) => `↩️ Отменил запись <b>+${a}</b>. Статус: кнопка «📊 Мой оборот» в меню.`,
+    kk: (a: Amt) => `↩️ <b>+${a}</b> жазбасын болдырмадым. Күйі: мәзірдегі «📊 Менің айналымым».`,
+    en: (a: Amt) => `↩️ Undid the entry <b>+${a}</b>. Status: «📊 My turnover» in the menu.`,
+  },
+} satisfies Record<string, unknown>;
+
+/** Алерты о лимитах — текст по языку. (t — оборот, l — лимит.) */
+export const TURNOVER_ALERTS = {
+  seOver: {
+    ru: (t: Amt, l: Amt) => `Месячный лимит самозанятого превышен: ${t} при пороге 300 МРП (${l}). В этом месяце режим самозанятого не применяется — свериться стоит с бухгалтером.`,
+    kk: (t: Amt, l: Amt) => `Өзін-өзі жұмыспен қамтудың айлық шегі асып кетті: ${t}, шек — 300 АЕК (${l}). Бұл айда өзін-өзі жұмыспен қамту режимі қолданылмайды — бухгалтермен тексерген жөн.`,
+    en: (t: Amt, l: Amt) => `Self-employed monthly limit exceeded: ${t}, the limit is 300 MCI (${l}). The self-employed regime doesn't apply this month — worth checking with an accountant.`,
+  },
+  seWarn: {
+    ru: (t: Amt, l: Amt) => `Близко к месячному лимиту самозанятого: ${t} из ${l}.`,
+    kk: (t: Amt, l: Amt) => `Өзін-өзі жұмыспен қамтудың айлық шегіне жақынсың: ${t} / ${l}.`,
+    en: (t: Amt, l: Amt) => `Close to the self-employed monthly limit: ${t} of ${l}.`,
+  },
+  vatOver: {
+    ru: (_t: Amt, l: Amt) => `Годовой оборот превысил порог НДС (${l}). Встать на учёт по НДС нужно не позже 5 рабочих дней после превышения.`,
+    kk: (_t: Amt, l: Amt) => `Жылдық айналым ҚҚС шегінен (${l}) асып кетті. ҚҚС есебіне асып кеткеннен кейін 5 жұмыс күнінен кешіктірмей тұру керек.`,
+    en: (_t: Amt, l: Amt) => `Annual turnover has exceeded the VAT threshold (${l}). You must register for VAT within 5 business days of exceeding it.`,
+  },
+  vatWarn: {
+    ru: (t: Amt, l: Amt) => `Близко к порогу НДС: ${t} из ${l} за год.`,
+    kk: (t: Amt, l: Amt) => `ҚҚС шегіне жақынсың: жылына ${t} / ${l}.`,
+    en: (t: Amt, l: Amt) => `Close to the VAT threshold: ${t} of ${l} for the year.`,
+  },
+  simpOver: {
+    ru: (_t: Amt, l: Amt) => `Годовой оборот превысил потолок упрощёнки (${l}) — пора на общеустановленный режим.`,
+    kk: (_t: Amt, l: Amt) => `Жылдық айналым оңайлатылған режим шегінен (${l}) асты — жалпыға белгіленген режимге көшу уақыты.`,
+    en: (_t: Amt, l: Amt) => `Annual turnover has exceeded the simplified-regime cap (${l}) — time to move to the general regime.`,
+  },
+  simpWarn: {
+    ru: (t: Amt, l: Amt) => `Близко к потолку упрощёнки: ${t} из ${l} за год.`,
+    kk: (t: Amt, l: Amt) => `Оңайлатылған режим шегіне жақынсың: жылына ${t} / ${l}.`,
+    en: (t: Amt, l: Amt) => `Close to the simplified-regime cap: ${t} of ${l} for the year.`,
+  },
+} satisfies Record<string, Record<Lang, (t: Amt, l: Amt) => string>>;
+
+export type AlertCode = keyof typeof TURNOVER_ALERTS;
+
+// ── Дедлайны ───────────────────────────────────────────────────────────────
+/** Локализация конкретных дедлайнов по id (ru берётся из самого Deadline). */
+export const DEADLINE_I18N: Record<string, { title: Record<Lang, string>; note: Record<Lang, string> }> = {
+  '910-1h-2026': {
+    title: {
+      ru: 'Форма 910 за 1-е полугодие 2026',
+      kk: '2026 жылдың 1-жартыжылдығына 910-нысан',
+      en: 'Form 910 for H1 2026',
+    },
+    note: {
+      ru: 'Упрощёнка: сдать декларацию за январь–июнь и уплатить налог.',
+      kk: 'Оңайлатылған: қаңтар–маусым декларациясын тапсырып, салық төлеу.',
+      en: 'Simplified regime: file the January–June declaration and pay the tax.',
+    },
+  },
+  '910-2h-2026': {
+    title: {
+      ru: 'Форма 910 за 2-е полугодие 2026',
+      kk: '2026 жылдың 2-жартыжылдығына 910-нысан',
+      en: 'Form 910 for H2 2026',
+    },
+    note: {
+      ru: 'Упрощёнка: сдать декларацию за июль–декабрь и уплатить налог.',
+      kk: 'Оңайлатылған: шілде–желтоқсан декларациясын тапсырып, салық төлеу.',
+      en: 'Simplified regime: file the July–December declaration and pay the tax.',
+    },
+  },
+};
+
+export const DEADLINES_UI = {
+  title: {
+    ru: '📅 <b>Ближайшие налоговые дедлайны</b>',
+    kk: '📅 <b>Жақындағы салық мерзімдері</b>',
+    en: '📅 <b>Upcoming tax deadlines</b>',
+  },
+  empty: {
+    ru: 'В моём списке ближайших сроков сейчас нет.',
+    kk: 'Менің тізімімде жақын мерзімдер қазір жоқ.',
+    en: 'No upcoming deadlines in my list right now.',
+  },
+  inDays: { ru: (d: string) => `через ${d}`, kk: (d: string) => `${d} қалды`, en: (d: string) => `in ${d}` },
+  lastDay: { ru: 'сегодня последний день', kk: 'бүгін соңғы күн', en: 'today is the last day' },
+  submitBy: { ru: (d: string) => `Сдать до ${d}`, kk: (d: string) => `Тапсыру мерзімі: ${d}`, en: (d: string) => `File by ${d}` },
+  payBy: { ru: (d: string) => `, уплатить до ${d}`, kk: (d: string) => `, төлеу мерзімі: ${d}`, en: (d: string) => `, pay by ${d}` },
+  footer: {
+    ru: '<i>Выпадает на выходной — переносится на ближайший рабочий день. Ориентир, сверяйся с КГД (1414).</i>',
+    kk: '<i>Демалысқа сәйкес келсе — келесі жұмыс күніне ауысады. Бағдар, МКК-мен тексер (1414).</i>',
+    en: '<i>If it falls on a weekend, it moves to the next business day. Guidance — verify with the tax office (1414).</i>',
+  },
+  reminderTitle: { ru: '🔔 <b>Напоминание о дедлайне</b>', kk: '🔔 <b>Мерзім туралы еске салу</b>', en: '🔔 <b>Deadline reminder</b>' },
+  reminderBody: {
+    ru: (d: string, title: string) => `Через ${d} — <b>${title}</b>.`,
+    kk: (d: string, title: string) => `${d} қалды — <b>${title}</b>.`,
+    en: (d: string, title: string) => `In ${d} — <b>${title}</b>.`,
+  },
+  reminderOff: {
+    ru: '<i>Отключить напоминания: /napomni стоп</i>',
+    kk: '<i>Еске салуды өшіру: /napomni стоп</i>',
+    en: '<i>Turn off reminders: /napomni стоп</i>',
+  },
+  subBtnOn: { ru: '🔕 Отключить напоминания', kk: '🔕 Еске салуды өшіру', en: '🔕 Turn off reminders' },
+  subBtnOff: { ru: '🔔 Напоминать о дедлайнах', kk: '🔔 Мерзімдерді еске салу', en: '🔔 Remind me of deadlines' },
+  subDone: {
+    ru: '🔔 Готово — напомню за 7 и за 1 день до сдачи.\nБлижайшие сроки: /dedlayny · Отключить: /napomni стоп',
+    kk: '🔔 Дайын — тапсыруға 7 және 1 күн қалғанда еске саламын.\nЖақын мерзімдер: /dedlayny · Өшіру: /napomni стоп',
+    en: "🔔 Done — I'll remind you 7 and 1 day before filing.\nUpcoming: /dedlayny · Turn off: /napomni стоп",
+  },
+  unsubDone: {
+    ru: 'Отключил напоминания о дедлайнах. Включить снова: /napomni',
+    kk: 'Мерзімдер туралы еске салуды өшірдім. Қайта қосу: /napomni',
+    en: 'Turned off deadline reminders. Turn back on: /napomni',
+  },
+  remOn: { ru: 'Напоминания включены 🔔', kk: 'Еске салу қосылды 🔔', en: 'Reminders on 🔔' },
+  remOff: { ru: 'Напоминания отключены', kk: 'Еске салу өшірілді', en: 'Reminders off' },
+} satisfies Record<string, unknown>;

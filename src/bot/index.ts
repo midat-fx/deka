@@ -49,8 +49,8 @@ const prefs = createSqlitePrefs();
 const turnoverStore = createSqliteTurnover();
 const remindersStore = createSqliteReminders();
 registerWizard(bot, telemetry, prefs);
-registerTurnover(bot, turnoverStore, telemetry);
-registerDeadlines(bot, remindersStore, telemetry);
+registerTurnover(bot, turnoverStore, telemetry, prefs);
+registerDeadlines(bot, remindersStore, telemetry, prefs);
 // Роутер человеческих фраз и кнопок меню — ДО поиска.
 registerTextRouter(bot, { prefs, turnover: turnoverStore, reminders: remindersStore, telemetry });
 registerSearch(bot, searchIndex, telemetry, llm, retrieval, prefs, createSqliteAnswerCache()); // последним: ловит свободный текст

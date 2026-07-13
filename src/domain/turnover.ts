@@ -7,6 +7,7 @@
  */
 import { LIMITS_TENGE } from './regimes';
 import { formatTenge } from './format';
+import { TURNOVER_ALERTS, type Lang } from '../i18n/i18n';
 
 /** Порог предупреждения «приближаешься» — 80% лимита. */
 const WARN_AT = 0.8;
@@ -40,7 +41,11 @@ export function parseAmount(input: string): number | null {
   return value > 0 ? value : null;
 }
 
-export function assessTurnover(monthTotal: number, yearTotal: number): TurnoverView {
+export function assessTurnover(
+  monthTotal: number,
+  yearTotal: number,
+  lang: Lang = 'ru',
+): TurnoverView {
   const se = LIMITS_TENGE.selfEmployedMonthly;
   const vat = LIMITS_TENGE.vatRegistrationAnnual;
   const simp = LIMITS_TENGE.simplifiedAnnualTurnover;
@@ -48,41 +53,23 @@ export function assessTurnover(monthTotal: number, yearTotal: number): TurnoverV
 
   // Самозанятый — месячный лимит.
   if (monthTotal > se) {
-    alerts.push({
-      level: 'over',
-      text: `Месячный лимит самозанятого превышен: ${formatTenge(monthTotal)} при пороге 300 МРП (${formatTenge(se)}). В этом месяце режим самозанятого не применяется — свериться стоит с бухгалтером.`,
-    });
+    alerts.push({ level: 'over', text: TURNOVER_ALERTS.seOver[lang](formatTenge(monthTotal), formatTenge(se)) });
   } else if (monthTotal >= se * WARN_AT) {
-    alerts.push({
-      level: 'warn',
-      text: `Близко к месячному лимиту самозанятого: ${formatTenge(monthTotal)} из ${formatTenge(se)}.`,
-    });
+    alerts.push({ level: 'warn', text: TURNOVER_ALERTS.seWarn[lang](formatTenge(monthTotal), formatTenge(se)) });
   }
 
   // НДС — годовой порог обязательной постановки на учёт.
   if (yearTotal > vat) {
-    alerts.push({
-      level: 'over',
-      text: `Годовой оборот превысил порог НДС (${formatTenge(vat)}). Встать на учёт по НДС нужно не позже 5 рабочих дней после превышения.`,
-    });
+    alerts.push({ level: 'over', text: TURNOVER_ALERTS.vatOver[lang](formatTenge(yearTotal), formatTenge(vat)) });
   } else if (yearTotal >= vat * WARN_AT) {
-    alerts.push({
-      level: 'warn',
-      text: `Близко к порогу НДС: ${formatTenge(yearTotal)} из ${formatTenge(vat)} за год.`,
-    });
+    alerts.push({ level: 'warn', text: TURNOVER_ALERTS.vatWarn[lang](formatTenge(yearTotal), formatTenge(vat)) });
   }
 
   // Упрощёнка — годовой потолок.
   if (yearTotal > simp) {
-    alerts.push({
-      level: 'over',
-      text: `Годовой оборот превысил потолок упрощёнки (${formatTenge(simp)}) — пора на общеустановленный режим.`,
-    });
+    alerts.push({ level: 'over', text: TURNOVER_ALERTS.simpOver[lang](formatTenge(yearTotal), formatTenge(simp)) });
   } else if (yearTotal >= simp * WARN_AT) {
-    alerts.push({
-      level: 'warn',
-      text: `Близко к потолку упрощёнки: ${formatTenge(yearTotal)} из ${formatTenge(simp)} за год.`,
-    });
+    alerts.push({ level: 'warn', text: TURNOVER_ALERTS.simpWarn[lang](formatTenge(yearTotal), formatTenge(simp)) });
   }
 
   return {

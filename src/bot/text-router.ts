@@ -108,12 +108,12 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
           case 'wizard':
             return sendWizardStart(ctx);
           case 'turnover':
-            return sendTurnoverStatus(ctx, turnover, uid);
+            return sendTurnoverStatus(ctx, turnover, uid, lang);
           case 'income':
             await ctx.reply(ASK_AMOUNT[lang], NO_PREVIEW);
             return;
           case 'deadlines':
-            return sendDeadlinesView(ctx, reminders, uid);
+            return sendDeadlinesView(ctx, reminders, uid, lang);
           case 'form910':
             return sendForm910(ctx, turnover, uid);
           case 'language':
@@ -156,7 +156,7 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
       }
 
       case 'deadlines':
-        return sendDeadlinesView(ctx, reminders, uid);
+        return sendDeadlinesView(ctx, reminders, uid, lang);
 
       case 'form910':
         return sendForm910(ctx, turnover, uid);
@@ -269,14 +269,15 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
     await ctx.answerCallbackQuery();
     if (uid === undefined) return;
     const dest = (ctx.callbackQuery.data ?? '').split('|')[1] ?? '';
+    const lang = await langOf(uid);
     telemetry?.track(uid, 'intent', `nav:${dest}`);
     switch (dest) {
       case '910':
         return sendForm910(ctx, turnover, uid);
       case 'oborot':
-        return sendTurnoverStatus(ctx, turnover, uid);
+        return sendTurnoverStatus(ctx, turnover, uid, lang);
       case 'dedlayny':
-        return sendDeadlinesView(ctx, reminders, uid);
+        return sendDeadlinesView(ctx, reminders, uid, lang);
     }
   });
 
@@ -299,6 +300,6 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
     await ctx.answerCallbackQuery('✅');
     await ctx.editMessageText(INCOME_CONFIRM[lang](formatTenge(amount)) + ' — ✅');
     telemetry?.track(uid, 'turnover', 'add');
-    await logIncome(ctx, turnover, uid, amount);
+    await logIncome(ctx, turnover, uid, amount, lang);
   });
 }
