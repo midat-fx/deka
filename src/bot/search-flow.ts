@@ -17,6 +17,8 @@ import {
   REFUSAL_EXAMPLES,
   WIZARD_BUTTON,
   KGD_BUTTON,
+  SEARCH_UI,
+  artRef,
   type Lang,
 } from '../i18n/i18n';
 import { followupKeyboard } from './keyboard';
@@ -43,19 +45,16 @@ function trimFragment(text: string, max = 350): string {
   return `${cut.slice(0, lastSpace > 200 ? lastSpace : max)}…`;
 }
 
-export function renderSearchReply(hits: SearchHit[]): string {
-  const lines: string[] = ['🔎 <b>Вот что говорит НК РК-2026:</b>', ''];
+export function renderSearchReply(hits: SearchHit[], lang: Lang = 'ru'): string {
+  const lines: string[] = [SEARCH_UI.fragmentsHeader[lang], ''];
   hits.forEach((h, i) => {
     const c = h.chunk;
-    lines.push(`${i + 1}. <b>Ст. ${esc(c.article)}. ${esc(c.title)}</b>`);
+    lines.push(`${i + 1}. <b>${esc(artRef(c.article, lang))}. ${esc(c.title)}</b>`);
     lines.push(`«${esc(trimFragment(c.text))}»`);
-    lines.push(`<a href="${chunkUrl(c)}">Открыть статью на adilet.zan.kz</a>`);
+    lines.push(`<a href="${chunkUrl(c)}">${SEARCH_UI.openArticle[lang]}</a>`);
     lines.push('');
   });
-  lines.push(
-    '<i>Это дословные фрагменты кодекса, найденные по твоему вопросу, — не готовый совет. ' +
-      'Человеческий пересказ с цитатами — скоро. Подбор режима — /start.</i>',
-  );
+  lines.push(SEARCH_UI.fragmentsFooter[lang]);
   return lines.join('\n');
 }
 
@@ -88,13 +87,13 @@ function topByArticle(hits: SearchHit[], n: number): SearchHit[] {
 }
 
 /** Человеческий ответ LLM + обязательные ссылки на статьи-источники. */
-export function renderAnswer(text: string, hits: SearchHit[]): string {
-  const lines: string[] = [esc(text), '', '<b>Источники (проверь сам):</b>'];
+export function renderAnswer(text: string, hits: SearchHit[], lang: Lang = 'ru'): string {
+  const lines: string[] = [esc(text), '', SEARCH_UI.sourcesHeader[lang]];
   for (const h of hits) {
-    lines.push(`• <a href="${chunkUrl(h.chunk)}">Ст. ${esc(h.chunk.article)}. ${esc(h.chunk.title)}</a>`);
+    lines.push(`• <a href="${chunkUrl(h.chunk)}">${esc(artRef(h.chunk.article, lang))}. ${esc(h.chunk.title)}</a>`);
   }
   lines.push('');
-  lines.push('<i>Ответ составлен по приведённым статьям НК РК-2026 и не является налоговой консультацией.</i>');
+  lines.push(SEARCH_UI.answerDisclaimer[lang]);
   return lines.join('\n');
 }
 
@@ -176,7 +175,7 @@ export function registerSearch(
 
     // С LLM — человеческий пересказ (grounded или откат к дословным
     // фрагментам); без LLM — сразу фрагменты. Таймаут 8с: мы внутри вебхука.
-    let reply = renderSearchReply(sourceHits);
+    let reply = renderSearchReply(sourceHits, lang);
     if (llm) {
       // Дневной лимит LLM на юзера: сверх — фрагменты (или протухший кэш).
       const overLimit =
@@ -192,7 +191,7 @@ export function registerSearch(
         });
         telemetry?.track(uid, 'answer', out.kind === 'error' ? `error:${out.reason}` : out.kind);
         if (out.kind === 'answered') {
-          reply = renderAnswer(out.text, sourceHits);
+          reply = renderAnswer(out.text, sourceHits, lang);
           if (qkey && cache) await cache.set(qkey, reply);
           if (cache && uid !== undefined) await cache.bumpToday(uid);
         } else if (cached && out.kind === 'error') {

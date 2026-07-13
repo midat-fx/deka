@@ -456,3 +456,122 @@ export const DEADLINES_UI = {
   remOn: { ru: 'Напоминания включены 🔔', kk: 'Еске салу қосылды 🔔', en: 'Reminders on 🔔' },
   remOff: { ru: 'Напоминания отключены', kk: 'Еске салу өшірілді', en: 'Reminders off' },
 } satisfies Record<string, unknown>;
+
+// ── Ссылка на статью в списке источников ───────────────────────────────────
+/** «726» → «Ст. 726» (ru) · «726-бап» (kk) · «Art. 726» (en). */
+export function artRef(article: string, lang: Lang = 'ru'): string {
+  if (lang === 'kk') return `${article}-бап`;
+  if (lang === 'en') return `Art. ${article}`;
+  return `Ст. ${article}`;
+}
+
+// ── Обёртка ответа поиска (сам ответ LLM — уже на языке пользователя) ───────
+export const SEARCH_UI = {
+  fragmentsHeader: {
+    ru: '🔎 <b>Вот что говорит НК РК-2026:</b>',
+    kk: '🔎 <b>ҚР СК-2026 не дейді:</b>',
+    en: '🔎 <b>Here is what the 2026 Tax Code says:</b>',
+  },
+  openArticle: {
+    ru: 'Открыть статью на adilet.zan.kz',
+    kk: 'adilet.zan.kz сайтында ашу',
+    en: 'Open the article on adilet.zan.kz',
+  },
+  fragmentsFooter: {
+    ru: '<i>Это дословные фрагменты кодекса, найденные по твоему вопросу, — не готовый совет. Подбор режима — /start.</i>',
+    kk: '<i>Бұл сұрағың бойынша табылған кодекстің дәлме-дәл үзінділері — дайын кеңес емес. Режим таңдау — /start.</i>',
+    en: '<i>These are verbatim fragments of the code found for your question — not ready-made advice. Regime wizard — /start.</i>',
+  },
+  sourcesHeader: {
+    ru: '<b>Источники (проверь сам):</b>',
+    kk: '<b>Дереккөздер (өзің тексер):</b>',
+    en: '<b>Sources (verify yourself):</b>',
+  },
+  answerDisclaimer: {
+    ru: '<i>Ответ составлен по приведённым статьям НК РК-2026 и не является налоговой консультацией.</i>',
+    kk: '<i>Жауап көрсетілген ҚР СК-2026 баптары бойынша жасалған және салықтық кеңес емес.</i>',
+    en: '<i>The answer is based on the cited articles of the 2026 Tax Code and is not tax advice.</i>',
+  },
+} satisfies Record<string, Record<Lang, string>>;
+
+// ── Форма 910 (сезонный магнит) ────────────────────────────────────────────
+type Lnk = string; // готовая HTML-ссылка на статью
+
+export const FORM910 = {
+  title: {
+    ru: '📋 <b>Форма 910 — упрощённая декларация</b>',
+    kk: '📋 <b>910-нысан — оңайлатылған декларация</b>',
+    en: '📋 <b>Form 910 — simplified declaration</b>',
+  },
+  who: {
+    ru: '<b>Кто сдаёт:</b> ИП и ТОО на упрощёнке (СНР на основе упрощённой декларации).',
+    kk: '<b>Кім тапсырады:</b> оңайлатылғандағы ЖК мен ЖШС (оңайлатылған декларация негізіндегі АСР).',
+    en: '<b>Who files:</b> sole proprietors and LLPs on the simplified regime.',
+  },
+  deadlinesTitle: {
+    ru: (l: Lnk) => `<b>Сроки за 1-е полугодие 2026</b> (${l}):`,
+    kk: (l: Lnk) => `<b>2026 жылдың 1-жартыжылдығы мерзімдері</b> (${l}):`,
+    en: (l: Lnk) => `<b>Deadlines for H1 2026</b> (${l}):`,
+  },
+  submitBy: {
+    ru: '• Сдать декларацию — до <b>15 августа</b>',
+    kk: '• Декларацияны тапсыру — <b>15 тамызға</b> дейін',
+    en: '• File the declaration — by <b>15 August</b>',
+  },
+  payBy: {
+    ru: '• Уплатить налог — до <b>25 августа</b>',
+    kk: '• Салықты төлеу — <b>25 тамызға</b> дейін',
+    en: '• Pay the tax — by <b>25 August</b>',
+  },
+  weekendNote: {
+    ru: '<i>Выпадает на выходной — переносится на ближайший рабочий день.</i>',
+    kk: '<i>Демалысқа сәйкес келсе — келесі жұмыс күніне ауысады.</i>',
+    en: '<i>If it falls on a weekend, it moves to the next business day.</i>',
+  },
+  howMuch: { ru: '<b>Сколько платить:</b>', kk: '<b>Қанша төлеу керек:</b>', en: '<b>How much to pay:</b>' },
+  rateSimplified: {
+    ru: (l: Lnk) => `• Упрощёнка: <b>4% от оборота</b> (${l}). Акимат может менять ставку ±50%.`,
+    kk: (l: Lnk) => `• Оңайлатылған: <b>айналымнан 4%</b> (${l}). Әкімдік мөлшерлемені ±50% өзгерте алады.`,
+    en: (l: Lnk) => `• Simplified: <b>4% of turnover</b> (${l}). The local authority may change the rate by ±50%.`,
+  },
+  rateSelfEmployed: {
+    ru: (l: Lnk) => `• Самозанятый: ИПН <b>0%</b> (${l}) — только соцплатежи через приложение e-Salyq.`,
+    kk: (l: Lnk) => `• Өзін-өзі жұмыспен қамтыған: ЖТС <b>0%</b> (${l}) — тек e-Salyq арқылы әлеуметтік төлемдер.`,
+    en: (l: Lnk) => `• Self-employed: income tax <b>0%</b> (${l}) — only social payments via the e-Salyq app.`,
+  },
+  estimateTitle: {
+    ru: '<b>Твоя прикидка</b> (из трекера, оборот за 2026):',
+    kk: '<b>Сенің болжамың</b> (трекерден, 2026 айналымы):',
+    en: '<b>Your estimate</b> (from the tracker, 2026 turnover):',
+  },
+  estimateLine: {
+    ru: (t: string, tax: string) => `Оборот ${t} → налог по упрощёнке 4% ≈ <b>${tax}</b> за год.`,
+    kk: (t: string, tax: string) => `Айналым ${t} → оңайлатылған 4% салық ≈ жылына <b>${tax}</b>.`,
+    en: (t: string, tax: string) => `Turnover ${t} → simplified 4% tax ≈ <b>${tax}</b> per year.`,
+  },
+  estimateNote: {
+    ru: '<i>Форма 910 — за полугодие; это годовой ориентир, точную сумму бери за отчётный период.</i>',
+    kk: '<i>910-нысан — жартыжылдыққа; бұл жылдық бағдар, нақты соманы есепті кезеңге ал.</i>',
+    en: '<i>Form 910 is per half-year; this is an annual guide — take the exact amount for the reporting period.</i>',
+  },
+  exampleLine: {
+    ru: (t: string, tax: string) => `<b>Пример:</b> при обороте ${t} налог по упрощёнке 4% = ${tax}.`,
+    kk: (t: string, tax: string) => `<b>Мысал:</b> айналым ${t} болса, оңайлатылған 4% салық = ${tax}.`,
+    en: (t: string, tax: string) => `<b>Example:</b> with turnover ${t}, the simplified 4% tax = ${tax}.`,
+  },
+  exampleNote: {
+    ru: '<i>Записывай доход (просто напиши сумму) — посчитаю по твоим цифрам.</i>',
+    kk: '<i>Табысты жаз (жай ғана соманы жаз) — сенің цифрларың бойынша есептеймін.</i>',
+    en: '<i>Log your income (just type the amount) — I will calculate from your numbers.</i>',
+  },
+  where: {
+    ru: '<b>Где сдать:</b> приложение <b>e-Salyq Business</b> или кабинет налогоплательщика; оплата — Kaspi/банк.',
+    kk: '<b>Қайда тапсыру:</b> <b>e-Salyq Business</b> қосымшасы немесе салық төлеуші кабинеті; төлем — Kaspi/банк.',
+    en: '<b>Where to file:</b> the <b>e-Salyq Business</b> app or the taxpayer cabinet; payment via Kaspi/bank.',
+  },
+  footer: {
+    ru: '<i>Ориентир, не бухучёт. Точные цифры — по декларации и/или с бухгалтером. Вопросы — КГД 1414.</i>',
+    kk: '<i>Бағдар, бухгалтерия емес. Нақты цифрлар — декларация бойынша және/немесе бухгалтермен. Сұрақтар — МКК 1414.</i>',
+    en: '<i>Guidance, not bookkeeping. Exact figures come from the declaration and/or an accountant. Questions — tax office 1414.</i>',
+  },
+} satisfies Record<string, unknown>;

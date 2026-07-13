@@ -10,6 +10,7 @@
  *    полугодия — Ст. 727. За 1-е полугодие 2026 → 15/25 августа.
  */
 import { formatTenge } from './format';
+import { FORM910, artRef, type Lang } from '../i18n/i18n';
 
 /** Базовая ставка упрощёнки (Ст. 726 п.1). Акимат может менять ±50%. */
 export const SIMPLIFIED_RATE = 0.04;
@@ -24,39 +25,41 @@ export function calcSimplifiedTax(turnover: number): number {
 
 /**
  * Чеклист формы 910 + калькулятор. Если известен оборот из трекера —
- * подставляем реальную прикидку, иначе показываем пример.
+ * подставляем реальную прикидку, иначе показываем пример. Язык — из настроек.
+ * Ставки/статьи/даты (grounded) идентичны во всех языках, меняется только текст.
  */
-export function renderForm910(yearTurnover: number | null): string {
+export function renderForm910(yearTurnover: number | null, lang: Lang = 'ru'): string {
+  const f = FORM910;
   const lines: string[] = [
-    '📋 <b>Форма 910 — упрощённая декларация</b>',
+    f.title[lang],
     '',
-    '<b>Кто сдаёт:</b> ИП и ТОО на упрощёнке (СНР на основе упрощённой декларации).',
+    f.who[lang],
     '',
-    '<b>Сроки за 1-е полугодие 2026</b> (' + art('z11967', 'Ст. 727') + '):',
-    '• Сдать декларацию — до <b>15 августа</b>',
-    '• Уплатить налог — до <b>25 августа</b>',
-    '<i>Выпадает на выходной — переносится на ближайший рабочий день.</i>',
+    f.deadlinesTitle[lang](art('z11967', artRef('727', lang))),
+    f.submitBy[lang],
+    f.payBy[lang],
+    f.weekendNote[lang],
     '',
-    '<b>Сколько платить:</b>',
-    `• Упрощёнка: <b>4% от оборота</b> (${art('z11961', 'Ст. 726')}). Акимат может менять ставку ±50%.`,
-    `• Самозанятый: ИПН <b>0%</b> (${art('z11830', 'Ст. 720')}) — только соцплатежи через приложение e-Salyq.`,
+    f.howMuch[lang],
+    f.rateSimplified[lang](art('z11961', artRef('726', lang))),
+    f.rateSelfEmployed[lang](art('z11830', artRef('720', lang))),
     '',
   ];
 
   if (yearTurnover !== null && yearTurnover > 0) {
     const tax = calcSimplifiedTax(yearTurnover);
-    lines.push('<b>Твоя прикидка</b> (из трекера, оборот за 2026):');
-    lines.push(`Оборот ${formatTenge(yearTurnover)} → налог по упрощёнке 4% ≈ <b>${formatTenge(tax)}</b> за год.`);
-    lines.push('<i>Форма 910 — за полугодие; это годовой ориентир, точную сумму бери за отчётный период.</i>');
+    lines.push(f.estimateTitle[lang]);
+    lines.push(f.estimateLine[lang](formatTenge(yearTurnover), formatTenge(tax)));
+    lines.push(f.estimateNote[lang]);
   } else {
     const example = 3_000_000;
-    lines.push('<b>Пример:</b> при обороте ' + formatTenge(example) + ' налог по упрощёнке 4% = ' + formatTenge(calcSimplifiedTax(example)) + '.');
-    lines.push('<i>Записывай доход (просто напиши сумму) — посчитаю по твоим цифрам.</i>');
+    lines.push(f.exampleLine[lang](formatTenge(example), formatTenge(calcSimplifiedTax(example))));
+    lines.push(f.exampleNote[lang]);
   }
 
   lines.push('');
-  lines.push('<b>Где сдать:</b> приложение <b>e-Salyq Business</b> или кабинет налогоплательщика; оплата — Kaspi/банк.');
+  lines.push(f.where[lang]);
   lines.push('');
-  lines.push('<i>Ориентир, не бухучёт. Точные цифры — по декларации и/или с бухгалтером. Вопросы — КГД 1414.</i>');
+  lines.push(f.footer[lang]);
   return lines.join('\n');
 }

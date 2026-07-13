@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { assessTurnover } from '../src/domain/turnover';
 import { renderStatus } from '../src/bot/turnover-flow';
 import { renderUpcoming, renderReminder, DEADLINES } from '../src/domain/deadlines';
+import { renderForm910 } from '../src/domain/form910';
 import { LIMITS_TENGE } from '../src/domain/regimes';
-import { formatDateI18n, pluralDaysI18n } from '../src/i18n/i18n';
+import { formatDateI18n, pluralDaysI18n, artRef } from '../src/i18n/i18n';
 
 describe('locale-хелперы дат и склонений', () => {
   it('formatDateI18n по языкам', () => {
@@ -57,5 +58,24 @@ describe('дедлайны локализованы', () => {
     expect(rem).toContain('Deadline reminder');
     expect(rem).toContain('15 August 2026');
     expect(rem).toContain('7 days');
+  });
+});
+
+describe('форма 910 локализована (ставка/сумма идентичны)', () => {
+  it('artRef по языкам', () => {
+    expect(artRef('726', 'ru')).toBe('Ст. 726');
+    expect(artRef('726', 'kk')).toBe('726-бап');
+    expect(artRef('726', 'en')).toBe('Art. 726');
+  });
+  it('kk: 910-нысан + ставка 4% + сумма налога идентична', () => {
+    const kk = renderForm910(3_000_000, 'kk');
+    expect(kk).toContain('910-нысан');
+    expect(kk).toContain('4%');
+    expect(kk).toContain('120 000 ₸'); // 4% от 3 000 000 — одинаково во всех языках
+  });
+  it('en: Form 910 + 4% of turnover', () => {
+    const en = renderForm910(null, 'en');
+    expect(en).toContain('Form 910');
+    expect(en).toContain('4% of turnover');
   });
 });

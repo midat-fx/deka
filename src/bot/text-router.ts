@@ -43,9 +43,14 @@ import type { EventTracker } from '../telemetry/types';
 const NO_PREVIEW = { link_preview_options: { is_disabled: true } } as const;
 
 /** Форма 910: чеклист + калькулятор с прикидкой из трекера. */
-export async function sendForm910(ctx: Context, turnover: TurnoverStore, uid: number): Promise<void> {
+export async function sendForm910(
+  ctx: Context,
+  turnover: TurnoverStore,
+  uid: number,
+  lang: Lang = 'ru',
+): Promise<void> {
   const totals = await turnover.totals(uid);
-  await ctx.reply(renderForm910(totals.yearTotal > 0 ? totals.yearTotal : null), {
+  await ctx.reply(renderForm910(totals.yearTotal > 0 ? totals.yearTotal : null, lang), {
     parse_mode: 'HTML',
     ...NO_PREVIEW,
   });
@@ -115,7 +120,7 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
           case 'deadlines':
             return sendDeadlinesView(ctx, reminders, uid, lang);
           case 'form910':
-            return sendForm910(ctx, turnover, uid);
+            return sendForm910(ctx, turnover, uid, lang);
           case 'language':
             await ctx.reply(TIL_PROMPT[lang], { reply_markup: languageKeyboard() });
             return;
@@ -159,7 +164,7 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
         return sendDeadlinesView(ctx, reminders, uid, lang);
 
       case 'form910':
-        return sendForm910(ctx, turnover, uid);
+        return sendForm910(ctx, turnover, uid, lang);
 
       case 'wizard':
         return sendWizardStart(ctx);
@@ -170,7 +175,7 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
     const uid = ctx.from?.id;
     if (uid === undefined) return;
     telemetry?.track(uid, 'intent', 'form910');
-    await sendForm910(ctx, turnover, uid);
+    await sendForm910(ctx, turnover, uid, await langOf(uid));
   });
 
   bot.command('settings', async (ctx) => {
@@ -273,7 +278,7 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
     telemetry?.track(uid, 'intent', `nav:${dest}`);
     switch (dest) {
       case '910':
-        return sendForm910(ctx, turnover, uid);
+        return sendForm910(ctx, turnover, uid, lang);
       case 'oborot':
         return sendTurnoverStatus(ctx, turnover, uid, lang);
       case 'dedlayny':
