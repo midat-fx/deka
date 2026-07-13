@@ -39,7 +39,17 @@ const RELEVANT_SECTION_PATTERNS = [
   // Глава 7 «Налоговая регистрация» — здесь живёт порог постановки на учёт
   // по НДС (Ст. 99: «предельный порог оборота — 10 000-кратный МРП»)
   /НАЛОГОВАЯ\s+РЕГИСТРАЦИЯ/i,
+  // Раздел 20 «Единый платёж» (Ст.820-825) — сколько ИП платит ЗА РАБОТНИКА:
+  // ставка 24,8% с 2026 (Ст.822 п.2), объект — доход работника (Ст.821).
+  /ЕДИНЫЙ\s+ПЛАТЕ[Ж]/i,
 ];
+
+/**
+ * Отдельные статьи из «нерелевантных» разделов, которые всё равно нужны ИП.
+ * Ст.84 «Обеспечение исполнения…», Ст.85 «Пени» — из Раздела 2, отвечают на
+ * частый вопрос «что будет за просрочку» (сегодня — отказ).
+ */
+const RELEVANT_ARTICLE_WHITELIST = new Set(['84', '85']);
 
 function clean(text: string): string {
   return text
@@ -107,8 +117,10 @@ export function parseCorpus(html: string): Article[] {
 }
 
 export function filterRelevant(articles: Article[]): Article[] {
-  return articles.filter((a) =>
-    RELEVANT_SECTION_PATTERNS.some((re) => re.test(a.section) || re.test(a.chapter)),
+  return articles.filter(
+    (a) =>
+      RELEVANT_ARTICLE_WHITELIST.has(a.article) ||
+      RELEVANT_SECTION_PATTERNS.some((re) => re.test(a.section) || re.test(a.chapter)),
   );
 }
 
