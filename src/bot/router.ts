@@ -20,6 +20,8 @@ export type Intent =
   | { kind: 'choose_lang' } // «смени язык» без указания какого
   | { kind: 'bare_confirm' } // «да/ок/иә» без контекста
   | { kind: 'log_income'; amount: number }
+  | { kind: 'vat'; amount: number } // «ндс с 500000» — калькулятор НДС 16%
+  | { kind: 'setaside'; amount: number } // «сколько отложить с 300000»
   | { kind: 'deadlines' }
   | { kind: 'form910' }
   | { kind: 'wizard' };
@@ -40,6 +42,11 @@ const BARE_CONFIRM =
 const INCOME_VERB = /(заработал|получил|пришл[оа]|запиши|доход|выручка|прибыль|таптым|табыс|earned|income|got paid)/i;
 /** Голая сумма: «500000», «1.3 млн тг», «400 тыс» — без других слов. */
 const BARE_AMOUNT = /^[\d\s.,]+(млрд|млн|тыс|мың|к|k|m)?\s*(тг|тенге|₸|kzt)?[.!\s]*$/i;
+
+/** Калькулятор НДС: срабатывает ТОЛЬКО со словом «ндс» И суммой (иначе «порог НДС» = вопрос). */
+const VAT_KW = /ндс|ққс|vat/i;
+/** «сколько отложить с 300к», «сколько налог с 500000», «отложить на налог». */
+const SETASIDE_KW = /отлож|отклад|қанша.{0,14}(бөл|салық)|сколько.{0,14}(налог|отдать|плат)|how much.{0,10}(tax|aside)|set aside/i;
 
 const FORM910_ONLY = /^(форма\s*910|910[-\s]?нысан|form\s*910|910|деклараци\w*)[?.!\s]*$/i;
 const DEADLINES_ONLY = /^(дедлайны?|сроки( сдачи)?|мерзімдер|deadlines?)[?.!\s]*$/i;
@@ -77,6 +84,17 @@ export function routeIntent(text: string): Intent | null {
 
   // 4. «Форма 910» / «910» / «декларация» — ДО дохода, иначе «910» съест парсер сумм.
   if (FORM910_ONLY.test(t)) return { kind: 'form910' };
+
+  // 4a. Калькулятор НДС и «сколько отложить» — только когда есть И слово-триггер,
+  //     И сумма. «Ндс/отложить» без числа — это вопрос → уходит в поиск.
+  if (VAT_KW.test(t)) {
+    const amount = amountFromPhrase(t);
+    if (amount !== null) return { kind: 'vat', amount };
+  }
+  if (SETASIDE_KW.test(t)) {
+    const amount = amountFromPhrase(t);
+    if (amount !== null) return { kind: 'setaside', amount };
+  }
 
   // 5. Доход: «заработал 500 тысяч» или просто «500000».
   if (INCOME_VERB.test(t)) {

@@ -35,7 +35,7 @@ export const WELCOME: Record<Lang, string> = {
     '🧮 Подобрать налоговый режим\n' +
     '📊 Следить за оборотом и лимитами\n' +
     '📅 Напоминать о дедлайнах\n' +
-    '💬 Отвечать на вопросы по кодексу — просто напиши вопрос\n\n' +
+    '💬 Отвечать на вопросы про ИП, самозанятых, НДС, ИПН, соцналог — со ссылкой на статью\n\n' +
     '<i>Это ориентир, а не налоговая консультация.</i>',
   kk:
     '👋 Сәлем! Мен — <b>Deka</b>, Қазақстандағы ЖК мен өзін-өзі жұмыспен қамтығандарға <b>2026 салық кодексі</b> бойынша көмектесемін. Бастапқы дереккөзге сүйеніп, баптарға сілтемемен жауап беремін. Бейресми көмекші.\n\n' +
@@ -43,7 +43,7 @@ export const WELCOME: Record<Lang, string> = {
     '🧮 Салық режимін таңдау\n' +
     '📊 Айналым мен шектерді бақылау\n' +
     '📅 Мерзімдерді еске салу\n' +
-    '💬 Кодекс бойынша сұрақтарға жауап — жай ғана жазыңыз\n\n' +
+    '💬 ЖК, өзін-өзі жұмыспен қамту, ҚҚС, ЖТС, әлеуметтік салық туралы сұрақтарға — бап сілтемесімен\n\n' +
     '<i>Бұл бағдар, салықтық кеңес емес.</i>',
   en:
     "👋 Hi! I'm <b>Deka</b> — I help Kazakhstan's sole proprietors and self-employed navigate the <b>2026 Tax Code</b>. Answers come from the official text with article references. Unofficial assistant, not affiliated with the tax authority.\n\n" +
@@ -51,7 +51,7 @@ export const WELCOME: Record<Lang, string> = {
     '🧮 Pick your tax regime\n' +
     '📊 Track turnover against limits\n' +
     '📅 Remind about deadlines\n' +
-    '💬 Answer questions about the code — just type your question\n\n' +
+    '💬 Answer questions on sole proprietors, self-employed, VAT, income tax, social tax — with an article link\n\n' +
     '<i>Guidance only, not tax advice.</i>',
 };
 
@@ -60,6 +60,7 @@ export const HELP: Record<Lang, string> = {
     'Пользуйся кнопками меню внизу экрана — или просто пиши по-человечески:\n' +
     '• «какой режим мне подходит» — подбор режима\n' +
     '• «заработал 500 тысяч» — запишу доход и сверю с лимитами\n' +
+    '• «ндс с 500000» — посчитаю НДС 16%; «сколько отложить с 300000» — прикину налог\n' +
     '• «дедлайны» — сроки и напоминания\n' +
     '• «переключи на казахский / english» — сменю язык\n' +
     '• Любой вопрос по налогам — найду ответ в кодексе со ссылками на статьи.',
@@ -67,6 +68,7 @@ export const HELP: Record<Lang, string> = {
     'Экранның астындағы мәзір батырмаларын қолданыңыз — немесе жай ғана жазыңыз:\n' +
     '• «маған қай режим келеді» — режим таңдау\n' +
     '• «500 мың таптым» — табысты жазып, шектермен салыстырамын\n' +
+    '• «500000-нан ққс» — ҚҚС 16% есептеймін; «300000-нан қанша бөлу» — салықты болжаймын\n' +
     '• «мерзімдер» — мерзімдер мен еске салулар\n' +
     '• «орысша сөйле / english» — тілді ауыстырамын\n' +
     '• Салық туралы кез келген сұрақ — кодекстен баптарға сілтемемен жауап табамын.',
@@ -74,6 +76,7 @@ export const HELP: Record<Lang, string> = {
     'Use the menu buttons at the bottom — or just type naturally:\n' +
     '• "which regime fits me" — regime wizard\n' +
     '• "earned 500000" — I will log income and check limits\n' +
+    '• "vat on 500000" — I calculate 16% VAT; "how much to set aside from 300000" — tax estimate\n' +
     '• "deadlines" — dates and reminders\n' +
     '• "switch to Russian / қазақша" — change language\n' +
     '• Any tax question — I will find the answer in the code with article references.',
@@ -594,3 +597,63 @@ export const MONTHLY_SUMMARY = {
     en: '<i>This is a monthly summary. Turn off proactive messages: /napomni стоп</i>',
   },
 } satisfies Record<string, Record<Lang, unknown>>;
+
+// ── Калькулятор НДС (ставка 16% — Ст.503; живая витрина рва свежести) ───────
+export const VAT_CALC = {
+  title: {
+    ru: (a: Amt) => `🧾 <b>НДС с суммы ${a}</b> (ставка 16%)`,
+    kk: (a: Amt) => `🧾 <b>${a} сомасынан ҚҚС</b> (мөлшерлеме 16%)`,
+    en: (a: Amt) => `🧾 <b>VAT on ${a}</b> (rate 16%)`,
+  },
+  onTop: {
+    ru: (vat: Amt, gross: Amt) => `• Начислить сверху: +<b>${vat}</b> → итого <b>${gross}</b>`,
+    kk: (vat: Amt, gross: Amt) => `• Үстіне қосу: +<b>${vat}</b> → барлығы <b>${gross}</b>`,
+    en: (vat: Amt, gross: Amt) => `• Add on top: +<b>${vat}</b> → total <b>${gross}</b>`,
+  },
+  included: {
+    ru: (vat: Amt, net: Amt) => `• Выделить из суммы: НДС <b>${vat}</b> (без НДС <b>${net}</b>)`,
+    kk: (vat: Amt, net: Amt) => `• Сомадан бөлу: ҚҚС <b>${vat}</b> (ҚҚС-сыз <b>${net}</b>)`,
+    en: (vat: Amt, net: Amt) => `• Extract from amount: VAT <b>${vat}</b> (net <b>${net}</b>)`,
+  },
+  rateNote: {
+    ru: (art: string) => `16% — общая ставка (${art} п.1). Для отдельных случаев есть льготные 5% / 10% — проверь, попадаешь ли ты под них.`,
+    kk: (art: string) => `16% — жалпы мөлшерлеме (${art} 1-т.). Жекелеген жағдайларда жеңілдікті 5% / 10% бар — оларға жататыныңды тексер.`,
+    en: (art: string) => `16% is the general rate (${art} §1). Reduced 5% / 10% rates exist for specific cases — check whether you qualify.`,
+  },
+  gptNote: {
+    ru: '<i>Обычный ИИ часто называет старые 12% — с 2026 общая ставка 16%.</i>',
+    kk: '<i>Кәдімгі ЖИ жиі ескі 12% дейді — 2026 жылдан жалпы мөлшерлеме 16%.</i>',
+    en: '<i>General AI often says the old 12% — since 2026 the general rate is 16%.</i>',
+  },
+} satisfies Record<string, Record<Lang, unknown>>;
+
+// ── «Сколько отложить с дохода» (упрощёнка 4% Ст.726 / самозанятый 0% Ст.720) ─
+export const SET_ASIDE = {
+  title: {
+    ru: (a: Amt) => `🐷 <b>Сколько отложить с ${a}</b>`,
+    kk: (a: Amt) => `🐷 <b>${a} сомасынан қанша бөлу керек</b>`,
+    en: (a: Amt) => `🐷 <b>How much to set aside from ${a}</b>`,
+  },
+  simplified: {
+    ru: (t: Amt, art: string) => `• На упрощёнке (4%, ${art}): отложи <b>${t}</b>`,
+    kk: (t: Amt, art: string) => `• Оңайлатылғанда (4%, ${art}): <b>${t}</b> бөл`,
+    en: (t: Amt, art: string) => `• On the simplified regime (4%, ${art}): set aside <b>${t}</b>`,
+  },
+  selfEmployed: {
+    ru: (art: string) => `• Самозанятый: ИПН <b>0%</b> (${art}). Соцплатежи считает приложение e-Salyq (их размер — в Соцкодексе, не в НК).`,
+    kk: (art: string) => `• Өзін-өзі жұмыспен қамтыған: ЖТС <b>0%</b> (${art}). Әлеуметтік төлемдерді e-Salyq есептейді (олардың мөлшері — Әлеуметтік кодексте, НК-де емес).`,
+    en: (art: string) => `• Self-employed: income tax <b>0%</b> (${art}). Social payments are computed by the e-Salyq app (their size is in the Social Code, not the Tax Code).`,
+  },
+  note: {
+    ru: '<i>Не знаю твой режим — показал оба. Точную сумму бери за отчётный период. Не уверен в режиме — нажми «🧮 Какой режим мне».</i>',
+    kk: '<i>Режиміңді білмеймін — екеуін де көрсеттім. Нақты соманы есепті кезеңге ал. Режимге сенімді болмасаң — «🧮 Қай режим маған».</i>',
+    en: '<i>I don\'t know your regime — showed both. Take the exact amount for the reporting period. Unsure of your regime — tap «🧮 My tax regime».</i>',
+  },
+} satisfies Record<string, Record<Lang, unknown>>;
+
+/** Приветствие пришедшего с лендинга за формой 910 (deep-link ?start=site910). */
+export const DEEPLINK_910: Record<Lang, string> = {
+  ru: 'Ты пришёл(ла) за формой 910 — вот всё по ней 👇',
+  kk: '910-нысан үшін келдің — міне, бәрі осында 👇',
+  en: 'You came for Form 910 — here it is 👇',
+};

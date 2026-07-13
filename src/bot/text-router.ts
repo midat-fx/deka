@@ -12,7 +12,9 @@ import { mainKeyboard } from './keyboard';
 import { sendWizardStart, languageKeyboard } from './wizard-flow';
 import { sendTurnoverStatus, logIncome } from './turnover-flow';
 import { sendDeadlinesView } from './deadlines-flow';
-import { renderForm910 } from '../domain/form910';
+import { renderForm910, renderSetAside } from '../domain/form910';
+import { renderVatCalc } from '../domain/vat';
+import { parseAmount } from '../domain/turnover';
 import { formatTenge } from '../domain/format';
 import {
   HELP,
@@ -160,6 +162,14 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
         return;
       }
 
+      case 'vat':
+        await ctx.reply(renderVatCalc(intent.amount, lang), { parse_mode: 'HTML', ...NO_PREVIEW });
+        return;
+
+      case 'setaside':
+        await ctx.reply(renderSetAside(intent.amount, lang), { parse_mode: 'HTML', ...NO_PREVIEW });
+        return;
+
       case 'deadlines':
         return sendDeadlinesView(ctx, reminders, uid, lang);
 
@@ -176,6 +186,19 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
     if (uid === undefined) return;
     telemetry?.track(uid, 'intent', 'form910');
     await sendForm910(ctx, turnover, uid, await langOf(uid));
+  });
+
+  bot.command('nds', async (ctx) => {
+    const uid = ctx.from?.id;
+    if (uid === undefined) return;
+    const lang = await langOf(uid);
+    telemetry?.track(uid, 'intent', 'vat');
+    const amount = parseAmount((ctx.match ?? '').toString().trim());
+    if (amount === null) {
+      await ctx.reply(ASK_AMOUNT[lang], NO_PREVIEW);
+      return;
+    }
+    await ctx.reply(renderVatCalc(amount, lang), { parse_mode: 'HTML', ...NO_PREVIEW });
   });
 
   bot.command('settings', async (ctx) => {

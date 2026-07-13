@@ -10,7 +10,7 @@
  *    полугодия — Ст. 727. За 1-е полугодие 2026 → 15/25 августа.
  */
 import { formatTenge } from './format';
-import { FORM910, artRef, type Lang } from '../i18n/i18n';
+import { FORM910, SET_ASIDE, artRef, type Lang } from '../i18n/i18n';
 
 /** Базовая ставка упрощёнки (Ст. 726 п.1). Акимат может менять ±50%. */
 export const SIMPLIFIED_RATE = 0.04;
@@ -21,6 +21,23 @@ const art = (anchor: string, label: string) => `<a href="${ADILET}#${anchor}">${
 /** Налог по упрощёнке за период (4% от оборота). */
 export function calcSimplifiedTax(turnover: number): number {
   return Math.round(turnover * SIMPLIFIED_RATE);
+}
+
+/**
+ * «Сколько отложить с этого дохода» — режим юзера неизвестен, поэтому честно
+ * показываем оба варианта: упрощёнка 4% (Ст.726) и самозанятый ИПН 0% (Ст.720).
+ * Ничего не пишет в учёт — просто прикидка при поступлении.
+ */
+export function renderSetAside(amount: number, lang: Lang = 'ru'): string {
+  const s = SET_ASIDE;
+  return [
+    s.title[lang](formatTenge(amount)),
+    '',
+    s.simplified[lang](formatTenge(calcSimplifiedTax(amount)), art('z11961', artRef('726', lang))),
+    s.selfEmployed[lang](art('z11830', artRef('720', lang))),
+    '',
+    s.note[lang],
+  ].join('\n');
 }
 
 /**

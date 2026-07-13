@@ -15,6 +15,8 @@ import {
   TIL_PROMPT,
   LANG_NAME,
   LANGS,
+  MENU,
+  DEEPLINK_910,
   type Lang,
 } from '../i18n/i18n';
 import { mainKeyboard } from './keyboard';
@@ -142,9 +144,17 @@ export function registerWizard(bot: Bot, telemetry?: EventTracker, prefs?: Prefs
       reply_markup: mainKeyboard(lang),
       ...NO_PREVIEW,
     });
-    await ctx.reply(WIZARD_BUTTON[lang] + ' 👇', {
-      reply_markup: new InlineKeyboard().text(WIZARD_BUTTON[lang], 'w|---|restart|go'),
-    });
+    // Deep-link из лендинга: пришёл за формой 910 → сразу веди к ней, а не в
+    // generic-визард (nav|910 обрабатывает text-router). Иначе — кнопка визарда.
+    if (/910|cta/i.test(payload)) {
+      await ctx.reply(DEEPLINK_910[lang], {
+        reply_markup: new InlineKeyboard().text(MENU.form910[lang], 'nav|910'),
+      });
+    } else {
+      await ctx.reply(WIZARD_BUTTON[lang] + ' 👇', {
+        reply_markup: new InlineKeyboard().text(WIZARD_BUTTON[lang], 'w|---|restart|go'),
+      });
+    }
   });
 
   bot.command('help', async (ctx) => {
