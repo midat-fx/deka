@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "stats": "tsx scripts/stats.ts",
-    "build:landing": "esbuild landing/src/main.ts --bundle --minify --outfile=landing/dist/app.js && cp landing/index.html landing/dist/index.html && cp landing/og.svg landing/dist/og.svg",
+    "build:landing": "esbuild landing/src/main.ts --bundle --minify --outfile=landing/dist/app.js && cp landing/index.html landing/dist/index.html && cp landing/og.jpg landing/dist/og.jpg",
     "eval": "tsx scripts/eval-retrieval.ts",
     "build:index": "tsx scripts/build-index.ts",
     "eval:answers": "tsx scripts/eval-answers.ts",
