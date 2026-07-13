@@ -28,6 +28,7 @@ import {
   type Lang,
 } from '../i18n/i18n';
 import { followupKeyboard } from './keyboard';
+import { matchFaq } from '../domain/faq';
 import type { PrefsStore } from '../store/prefs';
 import { cacheKey, type AnswerCache } from '../store/answer-cache';
 import type { EventTracker } from '../telemetry/types';
@@ -190,6 +191,18 @@ export function registerSearch(
     );
 
     if (!confident) {
+      // ПЕРЕД отказом — курируемый FAQ по темам вне НК (соцплатежи, регистрация,
+      // штрафы КоАП): даёт полезный ответ там, где кодекса не хватает.
+      const faq = matchFaq(query);
+      if (faq) {
+        telemetry?.track(uid, 'answer', `faq:${faq.id}`);
+        await ctx.reply(faq.reply[lang], {
+          parse_mode: 'HTML',
+          reply_markup: followupKeyboard(lang),
+          link_preview_options: { is_disabled: true },
+        });
+        return;
+      }
       await ctx.reply(renderRefusal(lang), {
         reply_markup: refusalKeyboard(lang),
         link_preview_options: { is_disabled: true },

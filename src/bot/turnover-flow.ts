@@ -10,7 +10,7 @@ import { InlineKeyboard, type Bot, type Context } from 'grammy';
 import { assessTurnover, parseAmount, type TurnoverView } from '../domain/turnover';
 import { LIMITS_TENGE } from '../domain/regimes';
 import { formatTenge } from '../domain/format';
-import { TURNOVER_UI, MONTHS_NOM, type Lang } from '../i18n/i18n';
+import { TURNOVER_UI, MONTHS_NOM, REMIND910_BTN, type Lang } from '../i18n/i18n';
 import type { TurnoverStore } from '../store/turnover';
 import type { PrefsStore } from '../store/prefs';
 import type { EventTracker } from '../telemetry/types';
@@ -92,7 +92,10 @@ export async function logIncome(
     `${TURNOVER_UI.logged[lang](formatTenge(amount))}\n\n${renderStatus(view, monthName, year, lang)}`,
     {
       parse_mode: 'HTML',
-      reply_markup: new InlineKeyboard().text(TURNOVER_UI.undoBtn[lang], 'turn|undo'),
+      reply_markup: new InlineKeyboard()
+        .text(TURNOVER_UI.undoBtn[lang], 'turn|undo')
+        .row()
+        .text(REMIND910_BTN[lang], 'rmd|910'),
       ...NO_PREVIEW,
     },
   );

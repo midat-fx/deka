@@ -80,4 +80,14 @@ export function registerDeadlines(
     await ctx.answerCallbackQuery(on ? DEADLINES_UI.remOn[lang] : DEADLINES_UI.remOff[lang]);
     await ctx.editMessageReplyMarkup({ reply_markup: subKeyboard(on, lang) });
   });
+
+  // One-tap подписка «напомнить про 910» из-под результата расчёта/визарда.
+  // Тост без правки клавиатуры — чтобы кнопка «поделиться» рядом осталась.
+  bot.callbackQuery('rmd|910', async (ctx) => {
+    const uid = ctx.from?.id;
+    if (uid === undefined) return;
+    await reminders.subscribe(uid);
+    telemetry?.track(uid, 'deadlines', 'sub');
+    await ctx.answerCallbackQuery({ text: DEADLINES_UI.subDone[await langOf(uid)], show_alert: true });
+  });
 }

@@ -4,7 +4,25 @@
  * Роутинг нажатий — в router.ts (кнопка приходит обычным текстом).
  */
 import { Keyboard, InlineKeyboard } from 'grammy';
-import { MENU, LANGS, type Lang } from '../i18n/i18n';
+import { MENU, LANGS, SHARE_BTN, SHARE_TEXT, REMIND910_BTN, type Lang } from '../i18n/i18n';
+
+const BOT_LINK = 'https://t.me/deka_tax_bot';
+
+/** Ссылка на нативный диалог пересылки Telegram с реф-меткой (?start=ref). */
+export function shareUrl(lang: Lang): string {
+  const link = `${BOT_LINK}?start=ref`;
+  return `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(SHARE_TEXT[lang])}`;
+}
+
+/**
+ * Клавиатура под результатом расчёта: «поделиться» (рост, K-фактор) и опц.
+ * «напомнить про 910» (one-tap подписка в момент интереса, callback rmd|910).
+ */
+export function resultKeyboard(lang: Lang, opts: { remind?: boolean } = {}): InlineKeyboard {
+  const kb = new InlineKeyboard().url(SHARE_BTN[lang], shareUrl(lang));
+  if (opts.remind) kb.row().text(REMIND910_BTN[lang], 'rmd|910');
+  return kb;
+}
 
 export function mainKeyboard(lang: Lang): Keyboard {
   return new Keyboard()

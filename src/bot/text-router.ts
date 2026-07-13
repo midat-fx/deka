@@ -8,7 +8,7 @@
  */
 import { InlineKeyboard, type Bot, type Context } from 'grammy';
 import { routeIntent } from './router';
-import { mainKeyboard } from './keyboard';
+import { mainKeyboard, resultKeyboard } from './keyboard';
 import { sendWizardStart, languageKeyboard } from './wizard-flow';
 import { sendTurnoverStatus, logIncome } from './turnover-flow';
 import { sendDeadlinesView } from './deadlines-flow';
@@ -55,6 +55,7 @@ export async function sendForm910(
   const totals = await turnover.totals(uid);
   await ctx.reply(renderForm910(totals.yearTotal > 0 ? totals.yearTotal : null, lang), {
     parse_mode: 'HTML',
+    reply_markup: resultKeyboard(lang, { remind: true }),
     ...NO_PREVIEW,
   });
 }
@@ -164,11 +165,19 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
       }
 
       case 'vat':
-        await ctx.reply(renderVatCalc(intent.amount, lang), { parse_mode: 'HTML', ...NO_PREVIEW });
+        await ctx.reply(renderVatCalc(intent.amount, lang), {
+          parse_mode: 'HTML',
+          reply_markup: resultKeyboard(lang),
+          ...NO_PREVIEW,
+        });
         return;
 
       case 'setaside':
-        await ctx.reply(renderSetAside(intent.amount, lang), { parse_mode: 'HTML', ...NO_PREVIEW });
+        await ctx.reply(renderSetAside(intent.amount, lang), {
+          parse_mode: 'HTML',
+          reply_markup: resultKeyboard(lang),
+          ...NO_PREVIEW,
+        });
         return;
 
       case 'factcheck':
@@ -205,7 +214,11 @@ export function registerTextRouter(bot: Bot, deps: RouterDeps): void {
       await ctx.reply(ASK_AMOUNT[lang], NO_PREVIEW);
       return;
     }
-    await ctx.reply(renderVatCalc(amount, lang), { parse_mode: 'HTML', ...NO_PREVIEW });
+    await ctx.reply(renderVatCalc(amount, lang), {
+      parse_mode: 'HTML',
+      reply_markup: resultKeyboard(lang),
+      ...NO_PREVIEW,
+    });
   });
 
   bot.command('settings', async (ctx) => {

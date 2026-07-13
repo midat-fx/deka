@@ -690,3 +690,21 @@ export const DEEPLINK_910: Record<Lang, string> = {
   kk: '910-нысан үшін келдің — міне, бәрі осында 👇',
   en: 'You came for Form 910 — here it is 👇',
 };
+
+// ── Кнопки под результатом: поделиться (Q6, рост) и напомнить про 910 (F3) ──
+export const SHARE_BTN: Record<Lang, string> = {
+  ru: '📤 Переслать другу-ИП',
+  kk: '📤 ЖК досыңа жіберу',
+  en: '📤 Share with a fellow SP',
+};
+/** Текст, который подставится в диалог пересылки Telegram. */
+export const SHARE_TEXT: Record<Lang, string> = {
+  ru: 'Считаю налоги по Налоговому кодексу-2026 в этом боте — отвечает цитатами из закона, бесплатно 👇',
+  kk: 'Осы ботпен 2026 Салық кодексі бойынша салық санаймын — заң дәйексөздерімен жауап береді, тегін 👇',
+  en: "I do my taxes with this bot per the 2026 Tax Code — it answers with citations from the law, free 👇",
+};
+export const REMIND910_BTN: Record<Lang, string> = {
+  ru: '🔔 Напомнить про сроки 910',
+  kk: '🔔 910 мерзімін еске салу',
+  en: '🔔 Remind me of the 910 dates',
+};
