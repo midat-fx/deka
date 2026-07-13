@@ -575,3 +575,22 @@ export const FORM910 = {
     en: '<i>Guidance, not bookkeeping. Exact figures come from the declaration and/or an accountant. Questions — tax office 1414.</i>',
   },
 } satisfies Record<string, unknown>;
+
+// ── Ежемесячная сводка оборота (retention-пуш, 1-го числа по Алматы) ────────
+export const MONTHLY_SUMMARY = {
+  header: {
+    ru: (m: string) => `📊 <b>Итог за ${m}</b>`,
+    kk: (m: string) => `📊 <b>${m} қорытындысы</b>`,
+    en: (m: string) => `📊 <b>${m} summary</b>`,
+  },
+  body: {
+    ru: (mt: Amt, yt: Amt) => `Оборот за месяц: <b>${mt}</b>\nС начала года: <b>${yt}</b>`,
+    kk: (mt: Amt, yt: Amt) => `Айлық айналым: <b>${mt}</b>\nЖыл басынан: <b>${yt}</b>`,
+    en: (mt: Amt, yt: Amt) => `Turnover for the month: <b>${mt}</b>\nSince the start of the year: <b>${yt}</b>`,
+  },
+  optOut: {
+    ru: '<i>Это ежемесячная сводка. Отключить проактивные сообщения: /napomni стоп</i>',
+    kk: '<i>Бұл айлық қорытынды. Проактивті хабарламаларды өшіру: /napomni стоп</i>',
+    en: '<i>This is a monthly summary. Turn off proactive messages: /napomni стоп</i>',
+  },
+} satisfies Record<string, Record<Lang, unknown>>;

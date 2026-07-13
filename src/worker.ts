@@ -20,6 +20,7 @@ import { neon } from '@neondatabase/serverless';
 import type { SqlExecutor } from './rag/vector-search';
 import { registerTurnover } from './bot/turnover-flow';
 import { D1Turnover, type D1TurnoverDB } from './store/turnover';
+import { renderMonthlySummary } from './domain/turnover';
 import { registerDeadlines } from './bot/deadlines-flow';
 import { registerTextRouter } from './bot/text-router';
 import { D1Reminders, type D1RemindersDB } from './store/reminders';
@@ -109,19 +110,17 @@ export default {
     return new Response('Deka is running. Talk to me on Telegram: https://t.me/deka_tax_bot');
   },
 
-  // Cron (см. wrangler.jsonc → triggers.crons): раз в сутки шлём напоминания
-  // подписчикам о дедлайнах, до сдачи которых 7 или 1 день.
-  // Закалено: 403 (юзер заблокировал бота) → отписка, 429 → пауза retry_after,
+  // Cron (см. wrangler.jsonc → triggers.crons): раз в сутки. Шлём подписчикам
+  // (1) напоминания о дедлайнах за 7 и 1 день; (2) 1-го числа — сводку оборота.
+  // Всё — на языке подписчика. Закалено: 403 (бан) → отписка, 429 → retry_after,
   // отправка пачками по 25 с паузой — лимит Telegram ~30 сообщений/сек.
   async scheduled(_event: unknown, env: Env, _ctx: CtxLike): Promise<void> {
     const today = new Date();
-    const due = dueReminders(today);
-    if (due.length === 0) return;
     const reminders = new D1Reminders(env.DB as unknown as D1RemindersDB);
     const subs = await reminders.listSubscribers();
     if (subs.length === 0) return;
 
-    // Язык каждого подписчика (один раз) — напоминание придёт на его языке.
+    // Язык каждого подписчика (один раз) — сообщение придёт на его языке.
     const salt = env.TELEMETRY_SALT ?? 'deka-mvp-salt';
     const prefs = new D1Prefs(env.DB as unknown as D1PrefsDB, salt);
     const langByChat = new Map<number, Lang>();
@@ -129,22 +128,54 @@ export default {
       subs.map(async (id) => langByChat.set(id, (await prefs.getLang(id)) ?? 'ru')),
     );
 
-    for (const d of due) {
-      // Рендерим на всех языках заранее — потом раздаём по языку подписчика.
+    // Разослать индивидуальный текст пачками по 25 (null — этому юзеру не шлём).
+    const broadcast = async (textFor: (chatId: number) => string | null): Promise<void> => {
+      for (let i = 0; i < subs.length; i += 25) {
+        const chunk = subs.slice(i, i + 25);
+        await Promise.allSettled(
+          chunk.map((chatId) => {
+            const text = textFor(chatId);
+            return text ? sendReminder(env.BOT_TOKEN, chatId, text, reminders) : Promise.resolve();
+          }),
+        );
+        if (i + 25 < subs.length) await sleep(1_100);
+      }
+    };
+
+    // 1) Дедлайн-напоминания (за 7 и 1 день до сдачи).
+    for (const d of dueReminders(today)) {
       const texts: Record<Lang, string> = {
         ru: renderReminder(d, today, 'ru'),
         kk: renderReminder(d, today, 'kk'),
         en: renderReminder(d, today, 'en'),
       };
-      for (let i = 0; i < subs.length; i += 25) {
-        const chunk = subs.slice(i, i + 25);
-        await Promise.allSettled(
-          chunk.map((chatId) =>
-            sendReminder(env.BOT_TOKEN, chatId, texts[langByChat.get(chatId) ?? 'ru'], reminders),
-          ),
-        );
-        if (i + 25 < subs.length) await sleep(1_100);
-      }
+      await broadcast((chatId) => texts[langByChat.get(chatId) ?? 'ru']);
+    }
+
+    // 2) Ежемесячная сводка оборота — 1-го числа по Алматы (UTC+5).
+    const almaty = new Date(today.getTime() + 5 * 3_600_000);
+    if (almaty.getUTCDate() === 1) {
+      const turnover = new D1Turnover(env.DB as unknown as D1TurnoverDB, salt);
+      const prevMonthIndex = (almaty.getUTCMonth() + 11) % 12;
+      // Шлём только активным трекером (yearTotal>0). Один запрос на юзера.
+      const summaryByChat = new Map<number, string>();
+      await Promise.all(
+        subs.map(async (chatId) => {
+          const s = await turnover.monthlySummary(chatId);
+          if (s.yearTotal > 0) {
+            summaryByChat.set(
+              chatId,
+              renderMonthlySummary(
+                s.prevMonthTotal,
+                s.yearTotal,
+                prevMonthIndex,
+                langByChat.get(chatId) ?? 'ru',
+              ),
+            );
+          }
+        }),
+      );
+      await broadcast((chatId) => summaryByChat.get(chatId) ?? null);
     }
   },
 };

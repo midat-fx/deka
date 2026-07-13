@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseAmount, assessTurnover } from '../src/domain/turnover';
+import { parseAmount, assessTurnover, renderMonthlySummary } from '../src/domain/turnover';
 import { LIMITS_TENGE } from '../src/domain/regimes';
 import { SqliteTurnover } from '../src/store/turnover';
 import { renderStatus } from '../src/bot/turnover-flow';
@@ -86,6 +86,27 @@ describe('SqliteTurnover — учёт по пользователю', () => {
     expect(await s.undoLast(1)).toBe(250_000);
     expect((await s.totals(1)).yearTotal).toBe(100_000);
     expect(await s.undoLast(2)).toBeNull(); // у другого юзера нечего отменять
+  });
+
+  it('monthlySummary: записи «сейчас» → прошлый месяц 0, год = сумма', async () => {
+    const s = mk();
+    await s.add(1, 200_000);
+    await s.add(1, 300_000);
+    const sum = await s.monthlySummary(1);
+    expect(sum.prevMonthTotal).toBe(0); // всё в текущем месяце, в прошлом — пусто
+    expect(sum.yearTotal).toBe(500_000);
+  });
+});
+
+describe('renderMonthlySummary (cron-пуш)', () => {
+  it('локализует месяц и добавляет год-алерт при превышении НДС', () => {
+    const over = LIMITS_TENGE.vatRegistrationAnnual + 1;
+    const en = renderMonthlySummary(1_000_000, over, 6, 'en'); // индекс 6 = July
+    expect(en).toContain('July summary');
+    expect(en).toContain('VAT'); // годовой порог НДС превышен
+    const kk = renderMonthlySummary(1_000_000, 500_000, 6, 'kk');
+    expect(kk).toContain('шілде');
+    expect(kk).toContain('/napomni'); // опт-аут присутствует
   });
 });
 

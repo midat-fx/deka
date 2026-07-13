@@ -19,12 +19,20 @@ export interface Totals {
   yearTotal: number;
 }
 
+/** Для ежемесячной сводки: оборот за ПРОШЛЫЙ календарный месяц + за год. */
+export interface MonthlySummary {
+  prevMonthTotal: number;
+  yearTotal: number;
+}
+
 export interface TurnoverStore {
   add(telegramId: number, amount: number): Promise<Totals>;
   totals(telegramId: number): Promise<Totals>;
   reset(telegramId: number): Promise<void>;
   /** Удалить последнюю запись; вернуть её сумму (null — нечего отменять). */
   undoLast(telegramId: number): Promise<number | null>;
+  /** Оборот за прошлый месяц и за год (для ежемесячного пуша). */
+  monthlySummary(telegramId: number): Promise<MonthlySummary>;
 }
 
 export const TURNOVER_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS turnover (
@@ -41,6 +49,9 @@ const MONTH_SQL =
   "SELECT COALESCE(SUM(amount),0) AS s FROM turnover WHERE user_hash=? AND strftime('%Y-%m',ts,'+5 hours')=strftime('%Y-%m','now','+5 hours')";
 const YEAR_SQL =
   "SELECT COALESCE(SUM(amount),0) AS s FROM turnover WHERE user_hash=? AND strftime('%Y',ts,'+5 hours')=strftime('%Y','now','+5 hours')";
+// Прошлый календарный месяц по Алматы: 'now' → +5ч → −1 месяц.
+const PREV_MONTH_SQL =
+  "SELECT COALESCE(SUM(amount),0) AS s FROM turnover WHERE user_hash=? AND strftime('%Y-%m',ts,'+5 hours')=strftime('%Y-%m','now','+5 hours','-1 month')";
 const INSERT_SQL = 'INSERT INTO turnover (user_hash, amount) VALUES (?, ?)';
 const DELETE_SQL = 'DELETE FROM turnover WHERE user_hash=?';
 const UNDO_SQL =
@@ -83,6 +94,13 @@ export class SqliteTurnover implements TurnoverStore {
       | { amount: number }
       | undefined;
     return row?.amount ?? null;
+  }
+
+  async monthlySummary(telegramId: number): Promise<MonthlySummary> {
+    const hash = hashUser(this.salt, telegramId);
+    const p = this.db.prepare(PREV_MONTH_SQL).get(hash) as { s: number };
+    const y = this.db.prepare(YEAR_SQL).get(hash) as { s: number };
+    return { prevMonthTotal: p.s, yearTotal: y.s };
   }
 }
 
@@ -135,5 +153,12 @@ export class D1Turnover implements TurnoverStore {
       .bind(hashUser(this.salt, telegramId))
       .first<{ amount: number }>();
     return row?.amount ?? null;
+  }
+
+  async monthlySummary(telegramId: number): Promise<MonthlySummary> {
+    const hash = hashUser(this.salt, telegramId);
+    const p = await this.db.prepare(PREV_MONTH_SQL).bind(hash).first<{ s: number }>();
+    const y = await this.db.prepare(YEAR_SQL).bind(hash).first<{ s: number }>();
+    return { prevMonthTotal: p?.s ?? 0, yearTotal: y?.s ?? 0 };
   }
 }

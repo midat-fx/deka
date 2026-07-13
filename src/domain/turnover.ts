@@ -7,7 +7,7 @@
  */
 import { LIMITS_TENGE } from './regimes';
 import { formatTenge } from './format';
-import { TURNOVER_ALERTS, type Lang } from '../i18n/i18n';
+import { TURNOVER_ALERTS, MONTHLY_SUMMARY, MONTHS_NOM, type Lang } from '../i18n/i18n';
 
 /** Порог предупреждения «приближаешься» — 80% лимита. */
 const WARN_AT = 0.8;
@@ -80,4 +80,33 @@ export function assessTurnover(
     simplifiedYearPct: yearTotal / simp,
     alerts,
   };
+}
+
+/**
+ * Текст ежемесячной сводки (для cron-пуша): оборот за прошлый месяц и за год
+ * + предупреждения о ГОДОВЫХ лимитах (НДС/упрощёнка), если близко/превышено.
+ * Чистая функция — данные (суммы, лимиты) одинаковы во всех языках.
+ */
+export function renderMonthlySummary(
+  prevMonthTotal: number,
+  yearTotal: number,
+  prevMonthIndex: number,
+  lang: Lang = 'ru',
+): string {
+  const ms = MONTHLY_SUMMARY;
+  const monthName = MONTHS_NOM[lang][prevMonthIndex] ?? MONTHS_NOM.ru[prevMonthIndex]!;
+  const lines: string[] = [
+    ms.header[lang](monthName),
+    '',
+    ms.body[lang](formatTenge(prevMonthTotal), formatTenge(yearTotal)),
+  ];
+  // Годовые пороги (месяц=0 → месячный лимит самозанятого не срабатывает).
+  const yearAlerts = assessTurnover(0, yearTotal, lang).alerts;
+  if (yearAlerts.length > 0) {
+    lines.push('');
+    for (const a of yearAlerts) lines.push(`${a.level === 'over' ? '🔴' : '⚠️'} ${a.text}`);
+  }
+  lines.push('');
+  lines.push(ms.optOut[lang]);
+  return lines.join('\n');
 }
