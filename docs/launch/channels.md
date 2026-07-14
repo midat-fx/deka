@@ -16,7 +16,8 @@
 | Свой канал/статус | `https://t.me/deka_tax_bot?start=my` |
 | TG-чаты ИП (посев) | `https://t.me/deka_tax_bot?start=chat` |
 | Посты админов каналов | `https://t.me/deka_tax_bot?start=admin` |
-| Бухгалтеры | `https://t.me/deka_tax_bot?start=buh` |
+| Бухгалтеры (общая) | `https://t.me/deka_tax_bot?start=buh` |
+| Бухгалтер поимённо | `https://t.me/deka_tax_bot?start=acc_<ник>` (напр. `acc_ivanova`) — каждый бухгалтер получает свою ссылку, в телеметрии видно, сколько клиентов пришло от него; клиент видит партнёрскую рамку «тебя направил бухгалтер» |
 | TikTok | `https://t.me/deka_tax_bot?start=tt` |
 | Instagram/Reels | `https://t.me/deka_tax_bot?start=ig` |
 | YouTube Shorts | `https://t.me/deka_tax_bot?start=yt` |

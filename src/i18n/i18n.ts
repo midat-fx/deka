@@ -696,6 +696,13 @@ export const DEEPLINK_910: Record<Lang, string> = {
   en: 'You came for Form 910 — here it is 👇',
 };
 
+/** Пришёл по ссылке бухгалтера (deep-link ?start=acc_<handle>) — B3 партнёрка. */
+export const PARTNER_WELCOME: Record<Lang, string> = {
+  ru: '🤝 Тебя направил твой бухгалтер. Я — для быстрых вопросов и расчётов по кодексу (со ссылками на статьи). Сложное и спорное решай со своим бухгалтером — я его не заменяю.',
+  kk: '🤝 Сені бухгалтерің жіберді. Мен — кодекс бойынша жылдам сұрақтар мен есептеулерге (бап сілтемелерімен). Күрделі мәселелерді бухгалтеріңмен шеш — мен оны алмастырмаймын.',
+  en: '🤝 Your accountant sent you here. I\'m for quick questions and calculations from the code (with article links). Take complex or disputed matters to your accountant — I don\'t replace them.',
+};
+
 // ── Кнопки под результатом: поделиться (Q6, рост) и напомнить про 910 (F3) ──
 export const SHARE_BTN: Record<Lang, string> = {
   ru: '📤 Переслать другу-ИП',

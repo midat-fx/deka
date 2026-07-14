@@ -80,6 +80,11 @@ export const T: Record<string, Entry> = {
   'stats.2l': { ru: 'фрагментов кодекса в базе', kk: 'базадағы кодекс үзінділері', en: 'code fragments indexed' },
   'stats.3l': { ru: 'автотестов на каждый релиз', kk: 'әр релизге автотест', en: 'automated tests per release' },
   'stats.4l': { ru: 'работает в облаке', kk: 'бұлтта жұмыс істейді', en: 'runs in the cloud' },
+  'stats.fresh': {
+    ru: '🔒 Ответы — по официальному тексту НК РК-2026 с <a href="https://adilet.zan.kz/rus/docs/K2500000214" target="_blank" rel="noopener">adilet.zan.kz</a>, сверено на 12 июля 2026. Обычный ИИ не знает, на какую дату актуальны его знания.',
+    kk: '🔒 Жауаптар — <a href="https://adilet.zan.kz/rus/docs/K2500000214" target="_blank" rel="noopener">adilet.zan.kz</a> ресми ҚР СК-2026 мәтіні бойынша, 2026 жылғы 12 шілдеге тексерілген. Кәдімгі ЖИ өз білімі қай күнге өзекті екенін білмейді.',
+    en: '🔒 Answers come from the official 2026 Tax Code text on <a href="https://adilet.zan.kz/rus/docs/K2500000214" target="_blank" rel="noopener">adilet.zan.kz</a>, verified as of 12 July 2026. A general AI can\'t tell you the date its knowledge is current.',
+  },
 
   // — Как работает —
   'how.title': { ru: 'Как Deka отвечает', kk: 'Deka қалай жауап береді', en: 'How Deka answers' },

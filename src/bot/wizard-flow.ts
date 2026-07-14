@@ -17,6 +17,7 @@ import {
   LANGS,
   MENU,
   DEEPLINK_910,
+  PARTNER_WELCOME,
   type Lang,
 } from '../i18n/i18n';
 import { mainKeyboard } from './keyboard';
@@ -145,6 +146,9 @@ export function registerWizard(bot: Bot, telemetry?: EventTracker, prefs?: Prefs
       reply_markup: mainKeyboard(lang),
       ...NO_PREVIEW,
     });
+    // B3: пришёл по ссылке бухгалтера (?start=acc_<handle>) — партнёрская рамка.
+    // Источник (какой бухгалтер) уже в телеметрии start-payload.
+    if (/^acc/i.test(payload)) await ctx.reply(PARTNER_WELCOME[lang], NO_PREVIEW);
     // Deep-link из лендинга: пришёл за формой 910 → сразу веди к ней, а не в
     // generic-визард (nav|910 обрабатывает text-router). Иначе — кнопка визарда.
     if (/910|cta/i.test(payload)) {
